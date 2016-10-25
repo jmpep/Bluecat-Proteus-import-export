@@ -1,0 +1,71 @@
+#EXAMPLE of CSV input file
+#possible actions
+#    CONFIG-NAME,ADD_IP,ADD_IP_FORCE,MODIFY_IP,DEL_IP,ADD_SUBNET,ADD_SUBNET_FORCE
+#    ,MODIFY_SUBNET,ADD_DEVICE,ADD_DEVICE_FORCE,DEL_DEVICE,MODIFY_DEVICE,ADD_TAG,MODIFY_TAG
+#    ,SEARCH_SUBNET
+#action in developement
+#    LIST_IP
+#REMARKS: the additional fields must exist ! the name in the TITLE command must be the same as the field
+#
+#
+
+CONFIG-NAME,NetworkConfig1
+
+TITLE_DEVICE,name,DeviceType,DeviceSubtype,ip4Addresses,description
+DEL_DEVICE,test-device1,,,,,
+ADD_DEVICE,test-device1,switch,,10.1.0.12;10.1.0.11,added test-device1,
+MODIFY_DEVICE,test-device1,router,,+10.1.0.15;+10.1.0.12;-10.1.0.17;-10.1.0.11,modified test-device1,
+
+#example SUBNETs + example own fields description & vlan
+TITLE_SUBNET,CIDR,name,description,vlan
+ADD_SUBNET,10.1.0.0/24,network_10.1.0.0_24,add subnet if not exist,vlan50
+MODIFY_SUBNET,10.1.0.0/24,network_10.1.0.0_24,modified subnet when field not empty,vlan51
+ADD_SUBNET,10.2.0.0/24,net_10.2.0.0_24,add subnet if not exist,VLAN2
+#
+#example IPs  + example own fields description & virtual
+TITLE_IP,name,ip,description,virtual
+ADD_IP_FORCE,TEST_1,10.1.0.5,rewritten TEST 5,1
+
+DEL_IP,,10.1.0.10,,,,,,
+DEL_IP,,10.1.0.11,,,,,,
+DEL_IP,,10.1.0.12,,,,,,
+DEL_IP,,10.1.0.13,,,,,,
+DEL_IP,,10.1.0.14,,,,,,
+DEL_IP,,10.1.0.15,,,,,,
+DEL_IP,,10.1.0.16,,,,,,
+DEL_IP,,10.1.0.17,,,,,,
+
+DEL_IP,,10.1.0.5,,,,,,
+DEL_IP,,10.1.0.254,,,,,,
+ADD_IP,TEST_10,10.1.0.10,added TEST 10,false
+ADD_IP,TEST_11,10.1.0.11,added TEST 11,true
+ADD_IP,TEST_12,10.1.0.12,added TEST 12,true
+ADD_IP,TEST_13,10.1.0.13,added TEST 13,false
+ADD_IP,TEST_14,10.1.0.14,added TEST 14,false
+ADD_IP,TEST_15,10.1.0.15,added TEST 15,true
+ADD_IP,TEST_16,10.1.0.16,added TEST 16,true
+ADD_IP,TEST_17,10.1.0.17,added TEST 17,false
+ADD_IP_FORCE,TEST_5,10.2.0.5,added TEST 5,true
+ADD_IP_FORCE,TEST_6,10.2.0.6,added TEST 6,true
+MODIFY_IP,TESTNEW_10,10.1.0.17,modified TEST 17,
+##
+##example for devices
+TITLE_DEVICE,name,DeviceType,DeviceSubtype,ip4Addresses,description
+DEL_DEVICE,test-device1,,,,,
+ADD_DEVICE,test-device1,switch,,10.1.0.10;10.1.0.11,added test-device1,
+MODIFY_DEVICE,test-device1,router,,+10.1.0.15;+10.1.0.12;-10.1.0.17;-10.1.0.11,modified test-device1,
+ADD_DEVICE,test-device2,Switch,,10.1.0.11,added test-device2
+ADD_DEVICE_FORCE,test-device3,Router,,10.1.0.12,delete and replace test-device3
+## add several IPs in device
+##example for Tags (example for VLANs or other groups' types)
+#TITLE_TAG,name,taggroup,descr_tag,parent-object,description
+#ADD_TAG,VLANXXX,ListOfVlans,Object1_to_tag,
+#ADD_TAG,VLANYYY,ListOfVlans,Object2_to_tag,
+##now link a second object to the TAG
+#MODIFY_TAG,ADD_TAG,VLANYYY,ListOfVlans,Object3_to_tag,
+
+#info subnet
+#
+TITLE_SEARCHSUBNET,description,cidr
+SEARCHSUBNET,10.1.0.0/24,all
+SEARCHSUBNET,10.2.0.0/24,all
