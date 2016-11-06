@@ -42,12 +42,12 @@ The field 'action' (see Format) allows to do some different actions.
 ###action in developement
     DEL_SUBNET,LIST_DEVICE_WITHOUT_IP,LISTTAGS
 ## Examples
-# I added for testing the examples some new fields and device'types like
-#   in IP4Network  : 'description,vlan'
-#   in IP4Address  : 'description,virtual'
-#   in Tags        : 'description,usedby,last-seen,alternative-name'
-#   in device'types: 'printer,PC'
-#
+> I added for testing the examples some new fields and device'types like
+>   in IP4Network  : 'description,vlan'
+>   in IP4Address  : 'description,virtual'
+>   in Tags        : 'description,usedby,last-seen,alternative-name'
+>   in device'types: 'printer,PC'
+>
 
 ##example global config
 CONFIG-NAME,NetworkConfig1
