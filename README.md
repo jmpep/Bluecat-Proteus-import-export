@@ -42,11 +42,11 @@ create a bulk import export script for the Bluecat Network Proteus IPAM (IP addr
 
 ## Examples
 I added for testing the examples some new fields and device'types like  
-* in IP4Network  : 'description,vlan'  
-* in IP4Address  : 'description,virtual'  
-* in Tags        : 'description,usedby,last-seen,alternative-name'  
-* in device'types: 'printer,PC'  
-  
+* in IP4Network  : 'description,vlan'
+* in IP4Address  : 'description,virtual'
+* in Tags        : 'description,usedby,last-seen,alternative-name'
+* in device'types: 'printer,PC'
+`
    #example global config  
    CONFIG-NAME,NetworkConfig1  
  
