@@ -1,31 +1,30 @@
-#EXAMPLE of CSV input file
-#possible actions
-#    CONFIG-NAME,ADD_IP,ADD_IP_FORCE,MODIFY_IP,DEL_IP,ADD_SUBNET,ADD_SUBNET_FORCE
-#    ,MODIFY_SUBNET,ADD_DEVICE,ADD_DEVICE_FORCE,DEL_DEVICE,MODIFY_DEVICE,ADD_TAG,MODIFY_TAG
-#    ,SEARCH_SUBNET
-#action in developement
-#    LIST_IP
-#REMARKS: the additional fields must exist ! the name in the TITLE command must be the same as the field
-#
+# I added for testing the examples some new fields and device'types like
+#   in IP4Network  : 'description,vlan'
+#   in IP4Address  : 'description,virtual'
+#   in Tags        : 'description,usedby,last-seen,alternative-name'
+#   in device'types: 'printer,PC'
 #
 
+##example global config
 CONFIG-NAME,NetworkConfig1
 
-TITLE_DEVICE,name,DeviceType,DeviceSubtype,ip4Addresses,description
-DEL_DEVICE,test-device1,,,,,
-ADD_DEVICE,test-device1,switch,,10.1.0.12;10.1.0.11,added test-device1,
-MODIFY_DEVICE,test-device1,router,,+10.1.0.15;+10.1.0.12;-10.1.0.17;-10.1.0.11,modified test-device1,
-
-#example SUBNETs + example own fields description & vlan
-TITLE_SUBNET,CIDR,name,description,vlan
-ADD_SUBNET,10.1.0.0/24,network_10.1.0.0_24,add subnet if not exist,vlan50
-MODIFY_SUBNET,10.1.0.0/24,network_10.1.0.0_24,modified subnet when field not empty,vlan51
-ADD_SUBNET,10.2.0.0/24,net_10.2.0.0_24,add subnet if not exist,VLAN2
+##example SUBNETs + example own fields description & vlan
+# cidr (obligatory fields) for the search
+# Obligatory is the name's fields.
+# optional the other fields. Ask your Proteus's administrator for having the name of the fields
+#TITLE_SUBNET,cidr,name,description,vlan
+#ADD_SUBNET,10.1.0.0/24,network_10.1.0.0_24,add subnet if not exist,vlan50
+#MODIFY_SUBNET,10.1.0.0/24,network_10.1.0.0_24,modified subnet when field not empty,vlan51
+#ADD_SUBNET,10.2.0.0/24,net_10.2.0.0_24,add subnet if not exist,VLAN2
 #
-#example IPs  + example own fields description & virtual
+##example IPs  + example own fields description & virtual
 TITLE_IP,name,ip,description,virtual
-ADD_IP_FORCE,TEST_1,10.1.0.5,rewritten TEST 5,1
+ADD_IP_FORCE,TEST_1,10.1.0.5,rewritten 10.1.0.5,1
+ADD_IP,TEST_gateway,10.1.0.1,updating gateway 10.1.0.1,1
 
+##example for Delete IP
+# Obligatory is the IP's fields which could be ip or IP4Address
+# optional the other fields. Ask your Proteus's administrator for having the name of the fields
 DEL_IP,,10.1.0.10,,,,,,
 DEL_IP,,10.1.0.11,,,,,,
 DEL_IP,,10.1.0.12,,,,,,
@@ -48,24 +47,89 @@ ADD_IP,TEST_17,10.1.0.17,added TEST 17,false
 ADD_IP_FORCE,TEST_5,10.2.0.5,added TEST 5,true
 ADD_IP_FORCE,TEST_6,10.2.0.6,added TEST 6,true
 MODIFY_IP,TESTNEW_10,10.1.0.17,modified TEST 17,
+
+###example for devices
+##info:
+## Obligatory is the name's fields.
+## optional the other fields. Ask your Proteus's administrator for having the name of the fields
 ##
-##example for devices
 TITLE_DEVICE,name,DeviceType,DeviceSubtype,ip4Addresses,description
 DEL_DEVICE,test-device1,,,,,
-ADD_DEVICE,test-device1,switch,,10.1.0.10;10.1.0.11,added test-device1,
-MODIFY_DEVICE,test-device1,router,,+10.1.0.15;+10.1.0.12;-10.1.0.17;-10.1.0.11,modified test-device1,
-ADD_DEVICE,test-device2,Switch,,10.1.0.11,added test-device2
-ADD_DEVICE_FORCE,test-device3,Router,,10.1.0.12,delete and replace test-device3
-## add several IPs in device
-##example for Tags (example for VLANs or other groups' types)
-#TITLE_TAG,name,taggroup,descr_tag,parent-object,description
-#ADD_TAG,VLANXXX,ListOfVlans,Object1_to_tag,
-#ADD_TAG,VLANYYY,ListOfVlans,Object2_to_tag,
-##now link a second object to the TAG
-#MODIFY_TAG,ADD_TAG,VLANYYY,ListOfVlans,Object3_to_tag,
-
-#info subnet
+ADD_DEVICE,test-device1,PC,,10.1.0.10;10.1.0.11,added test-device1,
+MODIFY_DEVICE,test-device1,printer,,+10.1.0.15;+10.2.0.6;-10.1.0.17;-10.1.0.11,modified test-device1,
+ADD_DEVICE,test-device2,PC,,10.1.0.11,added test-device2
+ADD_DEVICE_FORCE,test-device3,printer,,10.1.0.12,delete and replace test-device3
+
+##example for Tags (example for VLANs or other tags'groups)
+#info:
+# Obligatory is the taggroup's and name's fields.
+# optional the other fields. Ask your Proteus's administrator for having the name of the fields
+# special is the parent-object-field because some overlapping with different parent's type.
+#   parent-object-field is:
+#     . 'IP4Address' for binding an IP address,
+#     . 'cidr' or 'IP4Network:cidr' for a IP4Network,
+#     . IP4Block:cidr for an IP Block, other possibilities will follow when requested
+# special is CONFIG-NAME for linking object of an other configuration
 #
-TITLE_SEARCHSUBNET,description,cidr
-SEARCHSUBNET,10.1.0.0/24,all
-SEARCHSUBNET,10.2.0.0/24,all
+TITLE_TAG,taggroup,name,description,cidr,usedby,last-seen,alternative-name
+ADD_TAG_FORCE,ListOfVlans,VLANXXXtest,test tag 1,10.2.0.0/24;10.0.2.0/24,devicexxx,Friday,myvlan
+ADD_TAG,ListOfVlans,VLANYYYtest,test tag 2,10.1.0.0/24,deviceyyy,lasttime,yourvlan
+TITLE_TAG,taggroup,name,description,IP4Block:cidr,usedby
+ADD_TAG,MygroupTest1,test-block-tag1,test block tag 1,10.0.0.0/8,a-lot-of
+#now link a second object to the TAG
+TITLE_TAG,CONFIG-NAME,taggroup,name,description,IP4Address,usedby
+ADD_TAG,NetworkConfig3,ListOfVlans,VLANYYY,test tag YYY,10.1.0.16,deviceyyy,lasttime,yourvlan
+MODIFY_TAG,NetworkConfig1,ListOfVlans,VLANYYY,modified by someone,10.1.0.17,super user
+
+##search subnet
+# info:
+#  cidr (obligatory fields) for the search
+#  configuration (optional field) for searching in a specific configuration or all
+#  other fields will be show in the output
+#  at least -> TITLE_SEARCHSUBNET,cidr
+#  or example TITLE_SEARCHSUBNET,name,yourownfield,cidr,id,configuration,description
+##
+COMMENT_OUTPUT,#
+COMMENT_OUTPUT,SEARCHING OF SUBNETS
+TITLE_SEARCHSUBNET,name,cidr,id,configuration,description
+SEARCHSUBNET,,10.1.0.0/24,,all
+SEARCHSUBNET,,10.2.0.0/24,,all
+TITLE_SEARCHSUBNET,cidr,name,configuration,description
+SEARCHSUBNET,10.1.0.0/24,,NetworkConfig2,
+
+##list IPs of subnet
+# info:
+#  cidr (obligatory fields) for the search
+#  configuration (optional field) for searching in a specific configuration or all
+#  adding other fields will be show in the output
+#  in the output you will see the fields you have added
+#  at least -> TITLE_LISTIPS,cidr
+#  or example TITLE_LISTIPS,name,yourownfield,cidr,id,configurationX,description
+##
+COMMENT_OUTPUT,#
+COMMENT_OUTPUT,LIST of all devices
+TITLE_LISTIPS,cidr,configuration,name,address,state,type
+LISTIPS,10.1.0.0/24,all
+LISTIPS,10.2.0.0/24
+
+##list Devices
+# info:
+#  filter (special fields) for the search. If filter is empty it will search all devices.
+#    filter could be a RegEX
+#  configuration (optional field) for searching in a specific configuration or all
+#  deviceType (special field) for seeing the Device type name
+#  adding other fields will be show in the output
+#  in the output you will see the fields you have added
+#  at least -> TITLE_LISTDEVICES,name
+#  or example TITLE_LISTDEVICES,name,yourownfields,id,configurationX,deviceTypeId,deviceType
+##Example
+COMMENT_OUTPUT,#
+COMMENT_OUTPUT,LIST of all devices
+TITLE_LISTDEVICES,name,configuration,IP4Addresses,state,type,deviceType,description
+LISTDEVICES,,all
+COMMENT_OUTPUT,#
+COMMENT_OUTPUT,LIST of devices with first 'te' then any char and 't'
+TITLE_LISTDEVICES,filter,configuration,name,IP4Addresses,type,deviceTypeId,deviceType,description
+LISTDEVICES,te.*t,all
+
+# END EXAMPLES ############
