@@ -22,7 +22,7 @@ create a bulk import export script for the Bluecat Network Proteus IPAM (IP addr
 * log file: by default the log file will have the same name as the script file. You can change the option with coomand file.
 * output file: by default the log file will have the same name as the script file. You can change the option with coomand file. 
 # Usage
- <file>.ps [-level] [-ip <ip>] [-help] [-commands <input file name>] [-output <output's file name>] [-user <APIusername>] [-password <password>]
+ <file>.ps [-level] [-ip <ip>] [-help] [-commands <input file name>] [-output <output file name>] [-user <APIusername>] [-password <password>]
  If you omit some option a prompt will ask you
 ## '#' at the begining means comment. This line will be ignored.
 So you can fix the order of the fields in the actions. This allow you the create the csv from any Tabulator programs like Excel, open office, ....
