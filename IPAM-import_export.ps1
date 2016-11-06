@@ -1,168 +1,59 @@
-########################################################################
-# create, add, modify IPs,devices,TAGs,subnets
-# usage:
-#   A logfile is created <same-name-as-script-name>.log
-#   A commands' file is created <same-name-as-script-name>.csv
-########################################################################
+param([string]$level,[string]$ip,[switch]$help=$false,[string]$commands,[string]$output,[string]$user,[string]$password)
 #
-# CONFIGURE first:
-# - an API user
-# - the database for allowing access ( SSH on Proteus, configure additional, add allowed IP )
-#########################################
-#creation of inputs' file
-#Introduction
-# The "#" at the begining means comment. This line will be ignored.
-# In datas'file the title line (begining with "TITLE") give the format of the field's name and number of fields.
-#    For userfields patient until next version, the names of the fields in the TITEL line will be the same defined in the Proteus
-# The field "action" (see Format) allows to do some different actions.
-#Format:
-#  the format is comma separated, for a list of IP it is separated with ";"
-#     action,parameter1,prameter2,parameter3,parameter4,parameterX,...
-#  Option "action": always first. If "action" contains "_FORCE" that means deleted if it exists 
-#  if action is "TITLE" the line is treated as title (future developement)
-#  other actions CONFIG-NAME,ADD_IP, ADD_IP_FORCE, MODIFY_IP, MODIFY_IP, ADD_SUBNET, ADD_SUBNET_FORCE
-#  ADD_DEVICE, ADD_DEVICE_FORCE, MODIFY_DEVICE, ADD_TAG
+# project https://github.com/jmpep/Bluecat-Proteus-import-export
+# Copyright MIT License. For details look at https://github.com/jmpep/Bluecat-Proteus-import-export/blob/master/LICENSE
 #
-#CONFIG-NAME,NetworkConfig1
-#possible actions
-#    CONFIG-NAME,ADD_IP,ADD_IP_FORCE,MODIFY_IP,DEL_IP,ADD_SUBNET,ADD_SUBNET_FORCE
-#    ,MODIFY_SUBNET,ADD_DEVICE,ADD_DEVICE_FORCE,DEL_DEVICE,MODIFY_DEVICE,ADD_TAG,MODIFY_TAG
-#    ,SEARCH_SUBNET
-#action in developement
-#    LIST_IP
-#REMARKS: the additional fields must exist ! the name in the TITLE command must be the same as the field
-#
-#
-##example SUBNETs + example own fields description & vlan
-#TITLE_SUBNET,CIDR,name,description,vlan
-#ADD_SUBNET,10.1.0.0/24,network_10.1.0.0_24,add subnet if not exist,vlan50
-#MODIFY_SUBNET,10.1.0.0/24,network_10.1.0.0_24,modified subnet when field not empty,vlan51
-#ADD_SUBNET,10.2.0.0/24,net_10.2.0.0_24,add subnet if not exist,VLAN2
-##
-##example IPs  + example own fields description & virtual
-#TITLE_IP,name,ip,description,virtual
-#ADD_IP_FORCE,TEST_1,10.1.0.5,rewritten TEST 5,1
-#
-#DEL_IP,,10.1.0.10,,,,,,
-#DEL_IP,,10.1.0.11,,,,,,
-#DEL_IP,,10.1.0.12,,,,,,
-#DEL_IP,,10.1.0.13,,,,,,
-#DEL_IP,,10.1.0.14,,,,,,
-#DEL_IP,,10.1.0.15,,,,,,
-#DEL_IP,,10.1.0.16,,,,,,
-#DEL_IP,,10.1.0.17,,,,,,
-#
-#DEL_IP,,10.1.0.5,,,,,,
-#DEL_IP,,10.1.0.254,,,,,,
-#ADD_IP,TEST_10,10.1.0.10,added TEST 10,false
-#ADD_IP,TEST_11,10.1.0.11,added TEST 11,true
-#ADD_IP,TEST_12,10.1.0.12,added TEST 12,true
-#ADD_IP,TEST_13,10.1.0.13,added TEST 13,false
-#ADD_IP,TEST_14,10.1.0.14,added TEST 14,false
-#ADD_IP,TEST_15,10.1.0.15,added TEST 15,true
-#ADD_IP,TEST_16,10.1.0.16,added TEST 16,true
-#ADD_IP,TEST_17,10.1.0.17,added TEST 17,false
-#ADD_IP_FORCE,TEST_5,10.2.0.5,added TEST 5,true
-#ADD_IP_FORCE,TEST_6,10.2.0.6,added TEST 6,true
-#MODIFY_IP,TESTNEW_10,10.1.0.17,modified TEST 17,
-###
-###example for devices
-#TITLE_DEVICE,name,DeviceType,DeviceSubtype,ip4Addresses,description
-#DEL_DEVICE,test-device1,,,,,
-#ADD_DEVICE,test-device1,switch,,10.1.0.10;10.1.0.11,added test-device1,
-#MODIFY_DEVICE,test-device1,router,,+10.1.0.15;+10.1.0.12;-10.1.0.17;-10.1.0.11,modified test-device1,
-##ADD_DEVICE,test-device2,Switch,,10.1.0.11,added test-device2,other_parameters_in_next_version
-##ADD_DEVICE_FORCE,test-device3,Router,,10.1.0.12,delete and replace test-device3,other_parameters_in_next_version
-###### add several IPs in device
-##ADD_DEVICE,test1,PC,,10.1.0.10;12.1.0.11;12.1.0.12,descr test1,other_parameters_in_next_version
-##ADD_DEVICE_FORCE,test1,PC,,10.1.0.13;12.1.0.14;12.1.0.15,descr test1,other_parameters_in_next_version
-###next version ... MODIFY_DEVICE,test1,,,10.1.0.16,modified test1 when parameters not empty,other_parameters_in_next_version
-###next version ... MODIFY_DEVICE,test1,,,10.1.0.17,modified test1 when parameters not empty,other_parameters_in_next_version
-###example for Tags (example for VLANs or other groups' types)
-##TITLE_TAG,name,taggroup,descr_tag,parent-object,description,other_parameters_in_next_version
-##ADD_TAG,VLANXXX,ListOfVlans,Object1_to_tag,,other_parameters_in_next_version
-##ADD_TAG,VLANYYY,ListOfVlans,Object2_to_tag,,other_parameters_in_next_version
-###now link a second object to the TAG
-##MODIFY_TAG,ADD_TAG,VLANYYY,ListOfVlans,Object3_to_tag,,other_parameters_in_next_version
-#
-##info subnet
-##
-#TITLE_SEARCHSUBNET,description,cidr
-#SEARCHSUBNET,10.1.0.0/24,all
-#SEARCHSUBNET,10.2.0.0/24,all
-# END EXAMPLES ############
-#
+
+##############################################
+# show help
+#   
+# input:
+#   @none
+# return:
+#   @none
+##############################################
+function showHelp($path) {
+  $read = [System.IO.File]::OpenText($PSScriptRoot+"\readme.md");
+  while($null -ne ($line = $read.ReadLine())) {
+    sendMessages -typmsg "HELP" -msg $line;
+  }
+  $read.close();
+}
+
 #global inline# global variables
-$global:debugging="NO";
 $pt= $MyInvocation.MyCommand.path
 $pt= $pt.Replace(".ps1","");
 $global:INPUT_FILE = $pt+".csv"
 $global:OUTPUT_FILE = $pt+".out"
 $global:isoutput = "YES";
-$global:ERROR_FILE= $pt+".log"
-$global:ERROR_LEVEL = "DEBUG"
+$global:LOG_FILE= $pt+".log"
+$global:ERROR_LEVEL = "DEBUG"  # DEBUGGING < DEBUG < INFO < WARNING < ERROR < NORMAL < OK
+$global:logoverwrite="YES";
+$global:outputoverwrite="YES";
 #$global:wsdlPath = "http://$proteus/Services/API?wsdl"
 $global:proteus = "127.0.0.1";
+$global:proteus = "192.168.79.10";
 $global:wsdlPath = "https://$proteus/Services/API?wsdl"
 $global:Configuration = "Network"
 $MAXBLOCKS=1000;
-$global:theFields = {action="action";name="name";ip="ip";descr_ip="descr_ip";descr_dev="description";type="DeviceType";subtype="DeviceSubtype"};
 #define the minimal fields
 $global:aFieldsIP  = @('TITLE_IP','name','ip');
 $global:aFieldsSub = @('TITLE_SUBNET','CIDR','name');
 $global:aFieldsDev = @('TITLE_DEVICE','name');
 $global:aFieldsTag = @('TITLE_IP','name','taggroup');
 $global:aFieldsSearchSub = @('TITLE_SEARCHSUBNET','name','cidr');
+$global:aFieldsListIPs = @('TITLE_SEARCHSUBNET','name','cidr');
+$global:aFieldsListDevices = @('TITLE_LISTDEVICES','name','IP4Addresses');
 $global:nFieldsIP  = @{TITLE_IP=0;name=1;ip=2;};
 $global:nFieldsSub = @{TITLE_SUBNET=0;name=2;CIDR=1;};
 $global:nFieldsDev = @{TITLE_DEVICE=0;name=1;};
 $global:nFieldsTag = @{TITLE_IP=0;name=1;taggroup=2;};
 $global:nFieldsSearchSub = @{TITLE_SEARCHSUBNET=0;name=1;cidr=2;};
+$global:nFieldsListIPs = @{TITLE_SEARCHSUBNET=0;name=1;cidr=2;};
+$global:nFieldsListDevices = @{TITLE_LISTDEVICES=0;name=1;IP4Addresses=2;};
 $global:listActions = "CONFIG-NAME","ADD_IP","ADD_IP_FORCE","MODIFY_IP","DEL_IP","ADD_SUBNET","ADD_SUBNET_FORCE","MODIFY_SUBNET","ADD_DEVICE","ADD_DEVICE_FORCE","DEL_DEVICE","MODIFY_DEVICE","ADD_TAG","MODIFY_TAG";
-$global:listReadActions = @("SEARCHSUBNET","LIST_IP");
-Set-Variable ERRDEV1 -value '1' #-option Constant 
-Set-Variable ERRDEVPRO1 -value '2' #-option Constant 
-Set-Variable ERRDEVPRO2 -value '3' #-option Constant 
-Set-Variable ERRDEVPRO3 -value '4' #-option Constant 
-Set-Variable ERRDEVPRO4 -value '5' #-option Constant 
-Set-Variable ERRDEVPRO5 -value '6' #-option Constant 
-Set-Variable ERRDEVPRO6 -value '7' #-option Constant 
-Set-Variable ERRDEVPRO7 -value '8' #-option Constant 
-Set-Variable ERRDEVPRO8 -value '9' #-option Constant 
-Set-Variable ERRDEVPRO10 -value '10' #-option Constant 
-Set-Variable ERRDEVTYP1 -value '20' #-option Constant 
-Set-Variable ERRDEVTYP2 -value '21' #-option Constant 
-Set-Variable ERRTAG1    -value '22' #-option Constant 
-Set-Variable ERRTAG2    -value '23' #-option Constant 
-Set-Variable ERRTAG3    -value '24' #-option Constant 
-Set-Variable ERRFUNC1   -value '31' #-option Constant 
-Set-Variable ERRFUNC2   -value '32' #-option Constant 
-Set-Variable ERRFUNC3   -value '33' #-option Constant 
-Set-Variable ERRFUNC4   -value '34' #-option Constant 
-Set-Variable ERRSUBADDPRO1   -value '41' #-option Constant 
-Set-Variable ERRSUBADDPRO2   -value '42' #-option Constant 
-Set-Variable ERRSUBADDPRO3   -value '43' #-option Constant 
-Set-Variable ERRSUBADDPRO4   -value '44' #-option Constant 
+$global:listReadActions = @('SEARCHSUBNET','LISTIPS','LISTDEVICES','COMMENT_OUTPUT');
 
-function ArrayToHash($a)
-{
-    $hash = @{};
-    $i=0;foreach ($val in $a) { $hash.Add($val,$i);$i++; }
-    return $hash;
-}
-
-function stringArray ($a) {
-  $val = '';
-  foreach ($b in $a) { if ($val -eq '') { $val= $b } else { $val = $val + "," + $b;} }
-  return $val;
-}
-function stringHash ($a) {
-  $val = '';
-  $a1='';foreach ($i in $a.Keys.GetEnumerator() )  { if ($a1 -eq '') { $a1=$i; } else { $a1="$a1,$i"; }};
-  $a2='';foreach ($i in $a.Values.GetEnumerator() ){ if ($a2 -eq '') { $a2=$i; } else { $a2="$a2,$i"; }};
-  $val = '{(' + $a1 + ')=(' + $a2 + ')}';
-  return $val;
-}
 ##############################################
 # read information from console
 # input:
@@ -171,19 +62,48 @@ function stringHash ($a) {
 # return:
 #   @none
 ##############################################
-function getInputs([ref]$name,[ref]$pass,[ref]$input1, [ref] $out) {
- $ip = Read-Host 'IP (' $global:proteus ' )? Enter to keep this one'
- if ($ip -ne '') { $global:proteus=$ip };
- $outtxt = 'Output in file ['+$global:isoutput+']?';
- $outtmp = Read-Host $outtxt;
- if ($outtmp.ToUpper() -ne '') {
-  if (($outtmp.ToUpper() -eq 'Y') -or ($outtmp.ToUpper() -eq 'YES')) { $out = 'YES'}
- } else {
-  $out= $global:isoutput;
+function getInputs([ref]$name,[ref]$pass,[ref]$ip, [ref] $out) {
+ if ($ip.value -eq '') {
+   $ip.value = Read-Host 'IP (' $global:proteus ' )? Enter to keep this one'
+   if ($ip.Value -ne '') { $global:proteus=$ip };
  }
- $name.Value = Read-Host 'DB username?'
- $passcypher = Read-Host 'DB password?' -AsSecureString
- $pass.Value=[Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($passcypher));
+ if ($out.Value -eq '') {
+   $outtxt = 'Output in file "'+$global:OUTPUT_FILE +'" ['+$global:isoutput+']?';
+   $outtmp = Read-Host $outtxt;
+   if ($outtmp.ToUpper() -ne '') {
+    if (($outtmp.ToUpper() -eq 'Y') -or ($outtmp.ToUpper() -eq 'YES')) { $out = 'YES'}
+   } else {
+    $out= $global:isoutput;
+   }
+ }
+ if ($name.Value -eq '') { $name.Value = Read-Host 'DB username?' }
+ if ($pass.Value -eq '') {
+   $passcypher = Read-Host 'DB password?' -AsSecureString
+   $pass.Value=[Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($passcypher));
+ }
+}
+
+##############################################
+# output and error messages
+# input:
+#   @msg    message
+#   @typmsg "ERROR","WARNING","INFO","OK"
+#   @o      output in file
+# return:
+#   @none
+##############################################
+function getLevelParam( ) {
+  $typmsg = @{
+                 DEBUGGING=@{color="white";background="Red";level=0};
+                 DEBUG=@{color="white";background="";level=20};
+                 INFO=@{color="yellow";background="";level=40};
+                 WARNING=@{color="magenta";background="";level=50};
+                 NORMAL=@{color="white";background="";level=60}
+                 ERROR=@{color="red";background="";level=70};
+                 OK=@{color="green";background="";level=70}
+                 HELP=@{color="white";background="green";level=70}
+                };
+  return ,$typmsg;
 }
 
 ##############################################
@@ -196,16 +116,9 @@ function getInputs([ref]$name,[ref]$pass,[ref]$input1, [ref] $out) {
 #   @none
 ##############################################
 function sendMessages( ${msg}, ${typmsg} ="", $out="") {
+    $typmsg= $typmsg.ToUpper();
     $color = "white";$background='';
-    $atypmsg = @{
-                 DEBUGGING=@{color="white";background="Red";level=0};
-                 DEBUG=@{color="white";background="";level=0};
-                 INFO=@{color="yellow";background="";level=10};
-                 WARNING=@{color="magenta";background="";level=20};
-                 ERROR=@{color="red";background="";level=30};
-                 NORMAL=@{color="white";background="";level=40}
-                 OK=@{color="green";background="";level=40}
-                };
+    $atypmsg = getLevelParam;
     if (-not $atypmsg.ContainsKey($typmsg)) {
        $typmsg = "INFO";
     }
@@ -215,20 +128,53 @@ function sendMessages( ${msg}, ${typmsg} ="", $out="") {
     if ($out -eq "YES" ) {
         Write-Output $msg | Out-File $OUTPUT_FILE -Append
     }
-    if ($atypmsg[$ERROR_LEVEL].level -le $atypmsg[$typmsg].level ) {
-      $date=Get-Date -Format "yyyy-mm-dd,H:mm:ss"
-      if ($typmsg -eq "") { $typmsg2= ""} else { $typmsg2="${typmsg}"}
-      $message="${date},${typmsg2},${msg}"
-      if ($typmsg -ne "" ) {
-        Write-Output $message | Out-File $ERROR_FILE -Append
-      }
-      if ($atypmsg[$typmsg].background -eq '') {
-        Write-Host $message  -foregroundcolor $atypmsg[$typmsg].color;
-      } else {
-        Write-Host $message  -foregroundcolor $atypmsg[$typmsg].color -backgroundcolor $atypmsg[$typmsg].background;
+    if ($typmsg -eq 'HELP') {
+          Write-Host $msg  -foregroundcolor $atypmsg[$typmsg].color -backgroundcolor $atypmsg[$typmsg].background;
+    } else {
+      if ($atypmsg[$ERROR_LEVEL].level -le $atypmsg[$typmsg].level ) {
+        $date=Get-Date -Format "yyyy-mm-dd,H:mm:ss"
+        if ($typmsg -eq "") { $typmsg2= ""} else { $typmsg2="${typmsg}"}
+        $message="${date},${typmsg2},${msg}"
+        if ($typmsg -ne "" ) {
+          Write-Output $message | Out-File $LOG_FILE -Append
+        }
+        if ($atypmsg[$typmsg].background -eq '') {
+          Write-Host $message  -foregroundcolor $atypmsg[$typmsg].color;
+        } else {
+          Write-Host $message  -foregroundcolor $atypmsg[$typmsg].color -backgroundcolor $atypmsg[$typmsg].background;
+        }
       }
     }
  }
+
+##############################################
+# function for DEBUG
+##############################################
+function ArrayToHash($a)
+{
+    $hash = @{};
+    $i=0;foreach ($val in $a) { $hash.Add($val,$i);$i++; }
+    return $hash;
+}
+
+##############################################
+# function for DEBUG
+##############################################
+function stringArray ($a) {
+  $val = '';
+  foreach ($b in $a) { if ($val -eq '') { $val= $b } else { $val = $val + "," + $b;} }
+  return $val;
+}
+##############################################
+# function for DEBUG
+##############################################
+function stringHash ($a) {
+  $val = '';
+  $a1='';foreach ($i in $a.Keys.GetEnumerator() )  { if ($a1 -eq '') { $a1=$i; } else { $a1="$a1,$i"; }};
+  $a2='';foreach ($i in $a.Values.GetEnumerator() ){ if ($a2 -eq '') { $a2=$i; } else { $a2="$a2,$i"; }};
+  $val = '{(' + $a1 + ')=(' + $a2 + ')}';
+  return $val;
+}
 
 ##############################################
 # function to split the titles columns (different per type)
@@ -273,12 +219,34 @@ function fillLineInfo ([string] $line) {
            $global:aFieldsTag=$fields; $global:nFieldsTag=ArrayToHash($fields);
         }
         "TITLE_SEARCHSUBNET"    {
-           $global:aFieldsSearchSub=$fields.ToLower(); $global:nFieldsSearchSub=ArrayToHash($fields);
-           $msg = $line.ToLower();
-           $msg = $msg.Replace("title_searchsubnet,","");
-           $msg = $msg.Replace("id,","");
-           $msg = $msg.Replace("name,","");
-           $msg = 'id,name,configuration,' + $msg;
+           #$global:aFieldsSearchSub=$fields.ToLower(); $global:nFieldsSearchSub=ArrayToHash($fields);
+           $global:aFieldsSearchSub=$fields; $global:nFieldsSearchSub=ArrayToHash($fields);
+           $msg= $line;
+           $i1= $msg.ToUpper().indexOf('TITLE_SEARCHSUBNET');
+           if ($i1 -ge 0) {
+              $i2=$msg.indexOf(',',$i1);
+              $msg= $msg.Substring($i2+1);
+           }
+           sendMessages -typmsg "NORMAL" -msg $msg -out $global:isoutput;
+        }
+        "TITLE_LISTIPS"    {
+           $global:aFieldsListIPs=$fields; $global:nFieldsListIPs=ArrayToHash($fields);
+           $msg= $line;
+           $i1= $msg.ToUpper().indexOf('TITLE_LISTIPS');
+           if ($i1 -ge 0) {
+              $i2=$msg.indexOf(',',$i1);
+              $msg= $msg.Substring($i2+1);
+           }
+           sendMessages -typmsg "NORMAL" -msg $msg -out $global:isoutput;
+        }
+        "TITLE_LISTDEVICES"    {
+           $global:aFieldsListDevices=$fields; $global:nFieldsListDevices=ArrayToHash($fields);
+           $msg= $line;
+           $i1= $msg.ToUpper().indexOf('TITLE_LISTDEVICES');
+           if ($i1 -ge 0) {
+              $i2=$msg.indexOf(',',$i1);
+              $msg= $msg.Substring($i2+1);
+           }
            sendMessages -typmsg "NORMAL" -msg $msg -out $global:isoutput;
         }
         default        {
@@ -293,11 +261,8 @@ function fillLineInfo ([string] $line) {
            $info.Add("$i",$fields[$i]);
       }
       $info.Add("action",$fields[0]);
-#$a= stringHash($info);
-#$msg = 'DEBUG listReadActions :' + ' info=' + $a;
-#sendMessages -typmsg "DEBUGGING" -msg $msg;
     } elseif ($todo.Contains("_IP")) {
-      #$info= @{action=$todo;name=$fields[1].trim();ip=$fields[2].trim();};
+#below WILL BE simplified later
       $info = @{};
       for ($i=0; $i -lt $aFieldsIP.Count;$i++) {
         if ($i -lt $fields.Count) {
@@ -337,6 +302,26 @@ function fillLineInfo ([string] $line) {
         }
       }
       $info.Add("action",$fields[0]);
+    } elseif ($todo.Contains("LISTIPS")) {
+      $info = @{};
+      for ($i=0; $i -lt $aFieldsListIPs.Count;$i++) {
+        if ($i -lt $fields.Count) {
+           $info.Add($aFieldsListIPs[$i],$fields[$i]);
+        } else {
+           $info.Add($aFieldsListIPs[$i],'');
+        }
+      }
+      $info.Add("action",$fields[0]);
+    } elseif ($todo.Contains("LISTDEVICES")) {
+      $info = @{};
+      for ($i=0; $i -lt $aFieldsListDevices.Count;$i++) {
+        if ($i -lt $fields.Count) {
+           $info.Add($aFieldsListDevices[$i],$fields[$i]);
+        } else {
+           $info.Add($aFieldsListDevices[$i],'');
+        }
+      }
+      $info.Add("action",$fields[0]);
     } elseif ($todo.Contains("_SUBNET")) {
       $info = @{};
       for ($i=0; $i -lt $aFieldsSub.Count;$i++) {
@@ -347,10 +332,6 @@ function fillLineInfo ([string] $line) {
         }
       }
       $info.Add("action",$fields[0]);
-#$a= stringHash($info);
-#$f= stringArray($fields);
-#$msg = 'DEBUG:' + ' fields=' + $f + ' info=' + $a + ' CIDR=' + $info["CIDR"];
-#sendMessages -typmsg "DEBUGGING" -msg $msg;
 	} else {
       $info= @{action=$todo;name=$fields[1].trim();ip=$fields[2].trim();descr_ip=$fields[3].trim();};
     }
@@ -380,12 +361,7 @@ function initAPI([string] $name, [string] $pass) {
    $result= 0;
    $msg= "Wrong WSDL URI ${$wsdlPath} !";
    sendMessages -typmsg "ERROR" -msg $msg;
-   if ($debugging -ne 'YES') {
-     exit;
-   } else {
-     $msg= "DEBUGGING: Wrong WSDL URI ! Continue for debugging.";
-     sendMessages -typmsg "DEBUGGING" -msg $msg;
-   }
+   exit;
  }
  try {
    $wsdlProxy.login($name, $pass);
@@ -398,12 +374,7 @@ function initAPI([string] $name, [string] $pass) {
      $msg= "Wrong user or password !";
      sendMessages -typmsg "ERROR" -msg $msg;
      $wsdlinit= $null;
-     if ($debugging -ne 'YES') { exit; }
-     else {
-       $msg= "DEBUGGING: Continue for debugging.";
-       sendMessages -typmsg "DEBUGGING" -msg $msg;
-       $wsdlinit= @{cfgid=0};
-     }
+     exit;
   }
  return $wsdlinit;
 }
@@ -412,40 +383,55 @@ function initAPI([string] $name, [string] $pass) {
 # initialisation of the View
 # input:
 #   @wsdl   WSDL proxyobject
-#   @cfgid  ID of configuration
-#   @range  found block ornull
-#   @data   data to add
+#   @configname  ID of configuration
 # return:
 #   @configid 
 ##############################################
 function initConfiguration([ref] $wsdl, [string] $configname) {
    $ok=0;
+   $ErrorMessage = ''
    # get the ID of configruation
    try {
      $ConfigFound = $wsdl.value["proxy"].getEntityByName("0",$configname,"Configuration");
    } catch {
-     if ($debugging -ne 'YES') {
-       $msg ="Error on WSDL searching configuration $configname.";
-       sendMessages -typmsg "ERROR" -msg $msg
-     } else {
-       $msg ="DEBUGING step initConfiguration non WSDL answer for $configname. Continuing with config id -1.";
-       sendMessages -typmsg "DEBUGGING" -msg $msg;
-       $wsdl.value["cfgid"]=-1;
-       $wsdl.value["proxy"]='DEBUGGING';
-       return -1;
-     }
+     $ErrorMessage = $_.Exception.Message;
    }
-   if (($ConfigFound -ne $null) -and ($ConfigFound.id -ne 0)) {
-     $msg ="Configuration $configname found, Configuration ID = "+$ConfigFound.id;
-     sendMessages -typmsg "OK" -msg $msg
+   if (($ErrorMessage -eq '') -and ($ConfigFound.id -ne 0)) {
+     $para = $configname+';'+$ConfigFound.id;
+     $msg= getMessage -code $INIT3 -field $para;
+     sendMessages -typmsg "OK" -msg $msg;
      $wsdl.value["cfgid"]= $ConfigFound.id;
    } else {
-     $ErrorMessage = $_.Exception.Message;
-     $msg= "Configuration '"+$configname+"' not found! "+$ErrorMessage;
-     sendMessages -typmsg "ERROR" -msg $msg;
-     $wsdl.value["cfgid"]= $ConfigFound.id;
+     $para = $configname+';'+$ErrorMessage;
+     $e = showError -code $ERRINIT3 -fields $para;
+     $wsdl.value["cfgid"]= 0;
    }
    return $ConfigFound.id;
+}
+
+##############################################
+# serch configuration
+# input:
+#   @wsdl   WSDL proxyobject
+#   @configname  ID of configuration
+# return:
+#   @configid 
+##############################################
+function searchConfiguration($wsdl, [string] $configname) {
+   $cfgid=0;
+   $ErrorMessage = ''
+   # get the ID of configruation
+   try {
+     $ConfigFound = $wsdl.getEntityByName("0",$configname,"Configuration");
+   } catch {
+     $ErrorMessage = $_.Exception.Message;
+   }
+   if (($ErrorMessage -ne '') -or (!$ConfigFound) -or ($ConfigFound.id -eq 0)) {
+     $e = showError -code $ERRINIT3 -fields $configname+';'+ $ErrorMessage;
+   } else {
+     $cfgid = $ConfigFound.id;
+   }
+   return $Cfgid;
 }
 
 ##############################################
@@ -463,6 +449,78 @@ function readInputs([ref] $varfile) {
 }
 
 ##############################################
+# simple delete object
+# input:
+#   @wsdl   WSDL proxyobject
+#   @object object
+#   @type   string
+# return:
+#   @none
+##############################################
+function deleteObject($wsdl, $object) {
+   $err=0;
+   if ($object.id -ne 0 ) {
+     try {
+       $resultDelete = $wsdl.delete($object.id);
+       $msg = 'This object already exists. Option FORCE. Removing object id='+$object.id+" name="+$object.Name+" properties="+$object.properties;
+       sendMessages -typmsg "INFO" -msg $msg;
+     } catch {
+       $err=1;
+       $msgerror= $_.Exception.Message;
+       $msg = "Error by deleting of the object id="+$object.id+" name="+$object.Name+" properties="+$object.properties+" error="+$msgerror;
+       sendMessages -typmsg "ERROR" -msg $msg;
+     }
+   }
+   return $err;
+}
+
+##############################################
+# delete IP
+# input:
+#   @wsdl   WSDL proxyobject
+#   @cfgid  ID of configuration
+#   @range  found block ornull
+#   @data   data to add
+# return:
+#   @none
+##############################################
+function deleteIP($wsdl, $cfgid, $data,$verbose=1) {
+   $noterror=1;
+   $errmsgno=0;
+   if ($data.containsKey('ip') -or $data.containsKey('IP') ) {
+     $ip = $data['ip'];
+   } elseif ($data.containsKey('IP4Address')) {
+     $ip = $data['IP4Address'];
+   }
+   if ($errmsgno -eq 0) {
+       $IPFound = $wsdl.getIP4Address($cfgid, $ip); 
+       $cfg = $wsdl.getEntityById($cfgid);
+       $msgerror= "";
+       if ((!$IPFound) -or ($IPFound.id -eq 0 ))  {
+         if ($verbose -eq 1) {
+           $errmsgno=$ERRIPDEL1;
+           if ($msgerror -ne '') { $msg2= ' Error:'+$msgerror; } else { $msg2 ='' }
+           $msg = "Delete not needed. The IP "+$ip+" doesn`'t exist already in this configuration (" + $cfg.name + ')!'+$msg2;
+           sendMessages -typmsg "INFO" -msg $msg;
+         }
+       } else {
+         try {
+			 $resultDelete = $wsdl.delete($IPFound.id);
+             $msg = "Deleting IP id="+$IPFound.id+" name="+$IPFound.Name+" properties="+$IPFound.properties;
+             sendMessages -typmsg "OK" -msg $msg;
+         } catch {
+             $errmsgno=$ERRIPDEL2;
+             $msgerror= $_.Exception.Message;
+             if ($msgerror -ne '') { $msg2= ' Error:'+$msgerror; } else { $msg2 ='' }
+             $msg = "Error by deleting IP id="+$IPFound.id+" name="+$IPFound.Name+" properties="+$IPFound.properties+'.'+$msg2;
+             sendMessages -typmsg "ERROR" -msg $msg;
+         }
+      }
+   }
+   return $errmsgno;
+}
+
+##############################################
 # add IP
 # input:
 #   @wsdl   WSDL proxyobject
@@ -472,67 +530,88 @@ function readInputs([ref] $varfile) {
 # return:
 #   @none
 ##############################################
-function addIP($wsdl, $cfgid, $range,$data) {
-   if ($data["action"].Contains("_FORCE")) {
-       $IfExistDelete =1;
-   } else {
-       $IfExistDelete =0;
+function addIP($wsdl, $cfgid, $range, $data) {
+   $errmsgno = 0;
+   if ($data.containsKey('ip') -or $data.containsKey('IP') ) {
+     $ip = $data['ip'];
+   } elseif ($data.containsKey('IP4Address')) {
+     $ip = $data['IP4Address'];
    }
-   $tmpip = $wsdl.getIP4Address($cfgid, $data["ip"]); 
-   if ( $tmpip.id -ne 0 ) {
-      if ([string]::IsNullOrEmpty($tmpip.name)) {
-        modifyIP -wsdl $wsdl -cfgid $cfgid -range $range -data $data
-      } else {
-          $msg = "The IP "+$data["ip"]+" exist already! actual object is id="+$tmpip.id+" name="+$tmpip.Name+" properties="+$tmpip.properties;
-          sendMessages -typmsg "ERROR" -msg $msg;
+   $Ifspecialgateway = 0;
+   if ($data["action"].Contains("_FORCE")) {
+      $IfExistDelete =1;
+      $errmsgno = deleteIP -wsdl $wsdl -cfgid $cfgid -data $thedata -verbose 1;
+      if ($errmsgno -eq 0) {
+          $msg = 'Option FORCE. The IP '+$ip+' has been deleted!';
+          sendMessages -typmsg "NORMAL" -msg $msg;
       }
+      $errmsgno =0;
    } else {
-     $subnetFound = $wsdl.getIPRangedByIP($cfgid, "IP4Network",$data["ip"])
-    if (($subnetFound.Type -eq $null) -or ($subnetFound.Id -eq 0) ) {
-       $msg = "No subnet found for this IP "+$data["ip"]+" !";
+      #check if it is a default gateway created without values
+      $IPFound = $wsdl.getIP4Address($cfgid, $ip); 
+      if ($IPFound -and $IPFound.id -ne 0 ) {
+        if ([string]::IsNullOrEmpty($IPFound.name) -and $IPFound.properties.Contains('state=GATEWAY|') ) {
+          # only a update is needed
+          $Ifspecialgateway =1;
+        } else {
+          $errmsgno = $ERRIP1;
+          $msg = "The IP "+$ip+" exist already! actual object is id="+$IPFound.id+" name="+$IPFound.Name+" properties="+$IPFound.properties;
+          sendMessages -typmsg "ERROR" -msg $msg;
+          $msgerror= $msg;
+        }
+      }
+   }
+   if ($errmsgno -eq 0) {
+    $subnetFound = $wsdl.getIPRangedByIP($cfgid, "IP4Network",$ip)
+    if ((!$subnetFound) -or ($subnetFound.Id -eq 0) ) {
+       $msg = "No subnet found for this IP "+$ip+' in this configuration ID '+$cfgid+' !';
        sendMessages -typmsg "ERROR" -msg $msg;
+       $errmsgno = $ERRIP2;
     } else {
        # assign the IP / "MAKE_DHCP_RESERVED", "MAKE_STATIC", "MAKE_RESERVED" 
-       $msg = "Trying to insert IP "+$data["ip"]+" in subnet id="+$subnetFound.id+" subnet name="+$subnetFound.Name+" properties="+$subnetFound.properties;
+       $msg = "Trying to insert IP "+$ip+" in subnet id="+$subnetFound.id+" subnet name="+$subnetFound.Name+" properties="+$subnetFound.properties;
        sendMessages -typmsg "DEBUG" -msg $msg;
        $mac="";
-       $action="MAKE_STATIC";#
+       $action="MAKE_STATIC";
        $hostInfo=$data["name"];
-       #$properties="address="+$data["ip"]+'|'+"vip_ip4="+$data["vip_ip4"]+'|'+"nat_ip4="+$data["nat_ip4"]+'|'+"ilo_ip4="+$data["ilo_ip4"]+'|'+"is_management="+$data["is_management"]+'|'+"name="+$data["name"]+'|'+"descr_ip="+$data["descr_ip"]+'|';
        $properties = "";
+       $listexcludedfields= 'ip,name,title';
        foreach ($fieldn in $global:aFieldsIP) {              
          $ti = $fieldn.ToLower();
-         switch -wildcard ($ti) {
-                 "ip"   { }
-                 "title*" { }
-                 default {
-                    if ($data.containsKey($ti)) { $val = $data[$ti]; }
-                    else { $val=""; }
-                    $properties = $properties+ $fieldn +"="+ $val + '|';
-                 }
+         if  ( -not ($listexcludedfields.Contains($ti) -or $ti.Contains('title')) ) {
+             if ($data.containsKey($ti)) { $val = $data[$ti]; }
+             else { $val=""; }
+             $properties = $properties+ $fieldn +"="+ $val + '|';
          }
        }
-#$a= stringArray($global:aFieldsIP);
-#$f= stringHash($data);
-#$msg = 'DEBUG:' + ' aFieldsIP=' + $a + ' data=' + $f + ' properties=' + $properties;
-#sendMessages -typmsg "DEBUGGING" -msg $msg;
-       $ErrorMessage="";
        try {
-             $ipFound = $wsdl.assignIP4Address($cfgid, $data["ip"],$mac,$hostInfo,$action,$properties);
-           } catch {
-             $ErrorMessage = $_.Exception.Message;
-             $ipFound = $null;
-           }
-           if ( $ipFound -eq $null -or $ipFound -eq 0 ) {
-             $msg = "Could not assign the IP "+$data["ip"]+" with properties="+$properties+"! $ErrorMessage";
-             sendMessages -typmsg "ERROR" -msg $msg;
-           } else {
-             $ipCheck = $wsdl.getIP4Address($cfgid, $data["ip"]); 
-             #$ipCheck = $wsdl.getEntityByName($cfgid,$ipFound,"IP4Address");
-             $msg = "Achieved assignation of the IP "+$data["ip"]+". Saved id="+$ipCheck.id+" name="+$ipCheck.name+" with properties="+$ipCheck.properties;
-             sendMessages -typmsg "OK" -msg $msg;
-           }
+          $msgerror= '';
+          if ($Ifspecialgateway -eq 1) {
+            $IPFound.name = $hostInfo;
+            $IPFound.properties = $properties;
+            $wsdl.update($ipFound);
+            $msg = "Special case gateway of subnet "+$ip+" with properties="+$properties+'!';
+            sendMessages -typmsg "NORMAL" -msg $msg;
+          } else {
+            $ipFound = $wsdl.assignIP4Address($cfgid, $ip,$mac,$hostInfo,$action,$properties);
+          }
+       } catch {
+          $ipFound = $null;
+          $errmsgno = $ERRIP3;
+          $msgerror=$_.Exception.Message;
        }
+       if ( !$ipFound -or $ipFound.id -eq 0 ) {
+          if ($msgerror -ne '') { $msg2 = ' Error '+$msgerror; }
+          else { $msg2 = ''; }
+          $msg = "Could not assign the IP "+$ip+" with properties="+$properties+'!'+ $msg2;
+          sendMessages -typmsg "ERROR" -msg $msg;
+       } else {
+          $ipCheck = $wsdl.getIP4Address($cfgid, $ip); 
+          #$ipCheck = $wsdl.getEntityByName($cfgid,$ipFound,"IP4Address");
+          $msg = "Achieved assignation of the IP "+$ip+". Saved id="+$ipCheck.id+" name="+$ipCheck.name+" with properties="+$ipCheck.properties;
+          sendMessages -typmsg "OK" -msg $msg;
+       }
+    }
    }
 }
 
@@ -548,14 +627,28 @@ function addIP($wsdl, $cfgid, $range,$data) {
 ##############################################
 function modifyIP($wsdl, $cfgid, $range,$data) {
    $error=0;
-   $tmpip = $wsdl.getIP4Address($cfgid, $data["ip"]);
+   if ($data.containsKey('ip') -or $data.containsKey('IP') ) {
+     $ip = $data['ip'];
+   } elseif ($data.containsKey('IP4Address')) {
+     $ip = $data['IP4Address'];
+   }
+   try {
+     $tmpip = $wsdl.getIP4Address($cfgid, $ip);
+   } catch {
+     $ErrorMessage = $_.Exception.Message;
+     if ($ErrorMessage -ne '') { $msg2= ' Error: '+$ErrorMessage; }
+     else  { $msg2= ''; }
+     $msg= "Update not possible! id="+$tmpip.id+" name="+$tmpip.name+" properties="+$tmpip.properties+$msg2;
+     sendMessages -typmsg "ERROR" -msg $msg;
+     $error=1;
+   }
    if ( $tmpip -eq $null ) {
-          $msg = "The IP "+$data['ip']+" doesn`'t exist! No changes are possible";
+          $msg = "The IP "+$ip+" doesn`'t exist! No changes are possible";
           sendMessages -typmsg "ERROR" -msg $msg;
    } else {
-     $subnetFound = $wsdl.getIPRangedByIP($cfgid, "IP4Network",$data["ip"])
+     $subnetFound = $wsdl.getIPRangedByIP($cfgid, "IP4Network",$ip)
      if (($subnetFound.Type -eq $null) -or ($subnetFound.Id -eq 0) ) {
-            $msg = "No subnet found for this IP "+$data["ip"]+" !";
+            $msg = "No subnet found for this IP "+$ip+" !";
             sendMessages -typmsg "ERROR" -msg $msg;
      } else {
        # modify the IP
@@ -570,15 +663,19 @@ function modifyIP($wsdl, $cfgid, $range,$data) {
           $tmpip.name=$data["name"];
        }
        $properties = "";
+
+
+       $listexcludedfields= 'ip,name,title';
+         if  ( -not ($listexcludedfields.Contains($ti) -or $ti.Contains('title')) ) {
+             if ($data.containsKey($ti)) { $val = $data[$ti]; }
+             else { $val=""; }
+             $properties = $properties+ $fieldn +"="+ $val + '|';
+         }
        foreach ($fieldn in $global:aFieldsIP) {
          $ti = $fieldn.ToLower();
-         switch -wildcard ($ti) {
-           "ip"   { }
-           "title*" { }
-           default {
+         if  ( -not ($listexcludedfields.Contains($ti) -or $ti.Contains('title')) ) {
              if ($data.containsKey($ti)) { $new = $data[$ti]; }
              else { $new=""; }
-             #$properties = $properties+ $fieldn +"="+ $val + '|';
              if ($new -ne "") {
                $tmpprop= $subnetFound.properties;
                if (!$tmpprop.Contains($fieldn + '='+$new+'|')) {
@@ -596,7 +693,6 @@ function modifyIP($wsdl, $cfgid, $range,$data) {
                 }
               }
              }
-           }
          }
        }
        if ($propertiesnb -eq 0) {
@@ -612,7 +708,9 @@ function modifyIP($wsdl, $cfgid, $range,$data) {
            sendMessages -typmsg "DEBUG" -msg $msg;
          } catch {
            $ErrorMessage = $_.Exception.Message;
-           $msg= "Update not possible! id="+$tmpip.id+" name="+$tmpip.name+" properties="+$tmpip.properties+" err_msg="+$ErrorMessage;
+           if ($ErrorMessage -ne '') { $msg2= ' err_msg='+$ErrorMessage; }
+           else  { $msg2= ''; }
+           $msg= "Update not possible! id="+$tmpip.id+" name="+$tmpip.name+" properties="+$tmpip.properties+$msg2;
            sendMessages -typmsg "ERROR" -msg $msg;
            $error=1;
          }
@@ -662,6 +760,7 @@ function findBlock($wsdl, [int] $cfgid, [string] $CIDR) {
 #   @none
 ##############################################
 function addSubnet($wsdl, $cfgid, $range,$data) {
+   if ($data["action"].Contains("_FORCE")) { $IfExistDelete =1; } else { $IfExistDelete =0;   }
    try {
      $subnetFound = $wsdl.getEntityByCIDR($range.id,$data["CIDR"],"IP4Network");
      $msgerror= "";
@@ -669,40 +768,12 @@ function addSubnet($wsdl, $cfgid, $range,$data) {
      $msgerror= $_.Exception.Message;
    }
    if ($subnetFound.id -ne 0 ) {
-          $msg = "The Subnet "+$data["CIDR"]+" exist already! Cannot add it. Actual object is id="+$subnetFound.id+" name="+$subnetFound.Name+" properties="+$subnetFound.properties+" error="+$msgerror;
-          sendMessages -typmsg "ERROR" -msg $msg;
+      if ($msgerror -ne '') { $msg2 = ' Error:'+$msgerror; } else { $msg2= ''}
+      $msg = "The Subnet "+$data["CIDR"]+" exist already! Cannot add it. Actual object is id="+$subnetFound.id+" name="+$subnetFound.Name+" properties="+$subnetFound.properties+'.'+$msg2;
+      sendMessages -typmsg "ERROR" -msg $msg;
    } else {
      if ($range -ne $null) {
          # check properties
-#         $listOfSubnetsFields= $wsdl.getUserDefinedFields("IPv4AddressRange",0);
-#         $fieldsname="type";
-#         $index = ($listOfSubnetsFields.name.indexof($fieldsname));
-#         if (($index -gt -1)  -and ($listOfSubnetsFields.predefinedValues[$index] -ne $null)) {
-#           $aValues = $listOfSubnetsFields.predefinedValues[$index].split('|');
-#           if (-not $aValues.contains($data[$fieldsname])) {
-#             $errmsgno=$ERRSUBADDPRO1;
-#             $msg = "Wrong type's value ("+$fieldsname+") of device. "+$data[$fieldsname]+" doesn't exist for device "+$data["name"]+" ! Cannot add it."+"Allowed are :"+$aValues;
-#             sendMessages -typmsg "ERROR" -msg $msg;           
-#           }
-#         } else{
-#           $errmsgno=$ERRSUBADDPRO2;
-#           $msg = "Wrong property's name "+$fieldsname+" of device. "+$fieldsname+" doesn't exist for any device! Cannot add it.";
-#           sendMessages -typmsg "ERROR" -msg $msg;           
-#         }
-#         $fieldsname="location";
-#         $index = ($listOfSubnetsFields.name.indexof($fieldsname));
-#         if (($index -gt -1)  -and ($listOfSubnetsFields.predefinedValues[$index] -ne $null)) {
-#           $aValues = $listOfSubnetsFields.predefinedValues[$index].split('|');
-#           if (-not $aValues.contains($data[$fieldsname])) {
-#           $errmsgno=$ERRSUBADDPRO4;
-#             $msg = "Wrong type's value ("+$fieldsname+") of device. "+$data[$fieldsname]+" doesn't exist for device "+$data["name"]+" ! Cannot add it."+"Allowed are :"+$aValues;
-#             sendMessages -typmsg "ERROR" -msg $msg;
-#           }
-#         } else{
-#           $errmsgno=$ERRSUBADDPRO5;
-#           $msg = "Wrong property's name "+$fieldsname+" of device. "+$fieldsname+" doesn't exist for any device! Cannot add it.";
-#           sendMessages -typmsg "ERROR" -msg $msg;           
-#         }
          if ( $errmsgno-eq 0 ) {
             $properties = "";
             $listexcludedfields= 'name,cidr,title';
@@ -756,8 +827,9 @@ function modifySubnet($wsdl, $cfgid, $range,$data) {
      $msgerror= $_.Exception.Message;
    }
    if ($subnetFound.id -eq 0 ) {
-          $msg = "The Subnet "+$data["CIDR"]+' does not exist ! Cannot modify it. Actual object is id='+$subnetFound.id+" name="+$subnetFound.Name+" properties="+$subnetFound.properties+" error="+$msgerror;
-          sendMessages -typmsg "ERROR" -msg $msg;
+      if ($msgerror -ne '') { $msg2 = ' Error:'+$msgerror; } else { $msg2= ''}
+      $msg = "The Subnet "+$data["CIDR"]+' does not exist ! Cannot modify it. Actual object is id='+$subnetFound.id+" name="+$subnetFound.Name+" properties="+$subnetFound.properties+'.'+$msg2;
+      sendMessages -typmsg "ERROR" -msg $msg;
    } else {
      if ($range -ne $null) {
        $propertiesnb = 0;
@@ -835,8 +907,10 @@ function checkUserDefinedFields ($wsdl, $objectType, $fieldsname) {
   $listOfDevicesFields= $wsdl.getUserDefinedFields($objectType,0);
   if ($listOfDevicesFields.count -eq 0) {
     if ($fieldlsname -eq '') {
+      $list='';
+      foreach ($udf in $listOfDevicesFields) { if ($list -eq '') { $list=$udf.name;} else {$list = $list+','+$udf.name;} }
       $errno=$ERRDEVPRO2;
-      $msg = "Wrong property's name "+$fieldsname+" of device. "+$fieldsname+" doesn't exist for any device! Cannot add it.";
+      $msg = "Wrong property's name or user defined field "+$fieldsname+" of device. "+$fieldsname+" doesn't exist for any !";
       sendMessages -typmsg "WARNING" -msg $msg;           
     }
   } else {
@@ -858,9 +932,15 @@ function checkUserDefinedFields ($wsdl, $objectType, $fieldsname) {
 #   @cfgid  ID of configuration
 #   @data   data to add
 # return:
-#   @none
+#   @errmsgno error id
 ##############################################
-function addDevice($wsdl, $cfgid,$data,$fields) {
+function addDevice($wsdl, $cfgid,$data) {
+  if($cfgid -eq 0) {
+      $errmsgno=$ERRCFG1;
+      $msg = 'Missing configuration or configuration invalid.';
+      sendMessages -typmsg "ERROR" -msg $msg;
+      return $errmsgno;
+  } else {
    $noterror=1;
    $errmsgno=0;
    if ($data["action"].Contains("_FORCE")) {
@@ -877,15 +957,17 @@ function addDevice($wsdl, $cfgid,$data,$fields) {
    }
    if (($deviceTypeFound -eq $null) -or ($deviceTypeFound.id -eq 0) ) {
       $errmsgno=$ERRDEVTYP1;
-      $msg = "The device's type '"+$data["DeviceType"]+"' does`'nt exist ! Cannot add objet "+$data["name"]+". error="+$msgerror;
+      if ($msgerror -ne '') { $msg2 = ' Error:'+$msgerror; } else { $msg2= ''}
+      $msg = "The device's type '"+$data["DeviceType"]+"' does'nt exist ! Cannot add objet "+$data["name"]+'.'+$msg2;
       sendMessages -typmsg "ERROR" -msg $msg;
    }
    $subtypid=0;
-   if ($data["DeviceSubtype"] -ne "") {
+   if ($data["DeviceSubtype"] -ne '') {
        $deviceSubtypeFound = $wsdl.getEntityByName($deviceTypeFound.id,$data["DeviceSubtype"],"DeviceSubtype");
        if (($deviceSubTypeFound -eq $null) -or ($deviceSubTypeFound.id -eq 0 )) {
          $errmsgno=$ERRDEVTYP2;
-         $msg = "The device's subtype '"+$data["DeviceSubtype"]+"' does not exist ! Cannot add objet "+$data["name"]+". error="+$msgerror;
+         if ($_.Exception.Message -ne '') { $msg2 = ' Error:'+$_.Exception.Message; } else { $msg2= ''}
+         $msg = "The device's subtype '"+$data["DeviceSubtype"]+"' does not exist ! Cannot add objet "+$data["name"]+'.'+$msg2;
          sendMessages -typmsg "ERROR" -msg $msg
        }
        $subtypid=$deviceSubTypeFound.id;
@@ -895,7 +977,8 @@ function addDevice($wsdl, $cfgid,$data,$fields) {
      $msgerror= "";
      if ((($deviceFound -ne $null ) -and ($deviceFound.id -ne 0 )) -and ( -not $IfExistDelete )) {
           $errmsgno=$ERRDEV1;
-          $msg = "The device "+$data["name"]+" exist already! Cannot add it. Actual object is id="+$deviceFound.id+" name="+$deviceFound.Name+" devicetype="+$deviceFound.devicetype+" properties="+$deviceFound.properties+" error="+$msgerror;
+          if ($msgerror -ne '') { $msg2 = ' Error:'+$msgerror; } else { $msg2= ''}
+          $msg = "The device "+$data["name"]+" exist already! Cannot add it. Actual object is id="+$deviceFound.id+" name="+$deviceFound.Name+" devicetype="+$deviceFound.devicetype+" properties="+$deviceFound.properties+'.'+$msg2;
           sendMessages -typmsg "ERROR" -msg $msg;
      } else {
 	   if ( ($errmsgno -eq 0) -and ($deviceFound.id -ne 0 ) -and ( $IfExistDelete -eq 1)) {
@@ -906,7 +989,8 @@ function addDevice($wsdl, $cfgid,$data,$fields) {
            } catch {
              $errmsgno=$ERRDEVPRO7;
              $msgerror= $_.Exception.Message;
-             $msg = "Error by deleting of the device id="+$deviceFound.id+" name="+$deviceFound.Name+" properties="+$deviceFound.properties+" error="+$msgerror;
+             if ($msgerror -ne '') { $msg2 = ' Error:'+$msgerror; } else { $msg2= ''}
+             $msg = "Error by deleting of the device id="+$deviceFound.id+" name="+$deviceFound.Name+" properties="+$deviceFound.properties+'.'+$msg2;
              sendMessages -typmsg "ERROR" -msg $msg;
            }
        }
@@ -948,6 +1032,8 @@ function addDevice($wsdl, $cfgid,$data,$fields) {
      }
     }
    }
+   return $errmsgno;
+  }
 }
 
 ##############################################
@@ -957,9 +1043,15 @@ function addDevice($wsdl, $cfgid,$data,$fields) {
 #   @cfgid  ID of configuration
 #   @data   data to add
 # return:
-#   @none
+#   @errmsgno error id
 ##############################################
 function deleteDevice($wsdl, $cfgid,$data,$fields) {
+  if($cfgid -eq 0) {
+      $errmsgno=$ERRCFG1;
+      $msg = 'Missing configuration or configuration invalid.';
+      sendMessages -typmsg "ERROR" -msg $msg;
+      return $errmsgno;
+  } else {
    $noterror=1;
    $errmsgno=0;
    if ($errmsgno -eq 0) {
@@ -1006,6 +1098,8 @@ function deleteDevice($wsdl, $cfgid,$data,$fields) {
          }
       }
    }
+   return $errmsgno;
+ }
 }
 
 ##############################################
@@ -1015,9 +1109,15 @@ function deleteDevice($wsdl, $cfgid,$data,$fields) {
 #   @cfgid  ID of configuration
 #   @data   data to add
 # return:
-#   @none
+#   @errmsgno error id
 ##############################################
 function modifyDevice($wsdl, $cfgid,$data,$fields) {
+  if($cfgid -eq 0) {
+      $errmsgno=$ERRCFG1;
+      $msg = 'Missing configuration or configuration invalid.';
+      sendMessages -typmsg "ERROR" -msg $msg;
+      return $errmsgno;
+  } else {
    $noterror=1;
    $errmsgno=0;
    try {
@@ -1084,14 +1184,16 @@ function modifyDevice($wsdl, $cfgid,$data,$fields) {
                              $ip= $nip.replace('+','');
                              if ($b -eq 'ip4Addresses=') {
                                $newb= $b.replace('=','='+$ip);
+                               $tmpprop = $tmpprop.replace($b,$newb);
+                               $b = $newb;
                              } else {
                                $b2=$b+',';
                                if (-not $b2.contains($ip+',') ) {
                                  $newb= $b +','+$ip;
+                                 $tmpprop = $tmpprop.replace($b,$newb);
+                                 $b = $newb;
                                }
                              }
-                             $tmpprop = $tmpprop.replace($b,$newb);
-                             $b = $newb;
                           }
                         }
                       } else {
@@ -1131,6 +1233,8 @@ function modifyDevice($wsdl, $cfgid,$data,$fields) {
          sendMessages -typmsg "OK" -msg $msg;
      }
    }
+   return $errmsgno;
+ }
 }
 
 ##############################################
@@ -1144,176 +1248,257 @@ function modifyDevice($wsdl, $cfgid,$data,$fields) {
 #   @none
 ##############################################
 function addTags($wsdl, $cfgid, $data, $fields) {
+   $cfgname = $cfgid;
    $errmsgno=0;
-   $TaggroupFoundId = 0;
+   if ($data["action"].Contains("_FORCE")) {
+       $IfExistDelete =1;
+   } else {
+       $IfExistDelete =0;
+   }
    try {
      $taggroupFound = $wsdl.getEntityByName(0,$data["taggroup"],"TagGroup");
-     $TaggroupFoundId= $TaggroupFound.id;
      $msgerror= "";
    } catch {
      $errmsgno=$ERRTAG1;
      $msgerror= $_.Exception.Message;
    }
-   if (($errmsgno -eq 0) -and ($taggroupFound -ne $null) -and ($taggroupFoundId -ne 0) -and ($data["taggroup"] -eq $taggroupFound.name) ) {
-      $msg='Tag group '+$data['taggroup']+' exists (id='+$taggroupFound.id+')';
+   if (($errmsgno -eq 0) -and ($taggroupFound -ne $null) -and ($taggroupFound.id -ne 0) -and ($data["taggroup"] -eq $taggroupFound.name) ) {
+      # search the parent object
+      $parentobject ="";
+      $parenttag = "";
+      $parenttype= 'IP4Network';
+      $listpossibleparent = 'cidr,ip4network:cidr,ip4address,ip4address:ip,ip4block:cidr';
+      foreach ($fieldn in $global:aFieldsTag) {              
+           $ti = $fieldn.ToLower();
+           if  ($listpossibleparent.Contains($ti) ) {
+              $parentobject = $fieldn;
+              switch ($ti) {
+                 "cidr"              { $parenttag = 'cidr'; $parenttype= 'IP4Network';}
+                 "ip4network:cidr"   { $parenttag ='cidr'; $parenttype= 'IP4Network';}
+                 "ip4address"        { $parenttag = 'IP4Address';  $parenttype= 'IP4Address';}
+                 "ip4address:ip"     { $parenttag = 'IP4Address';  $parenttype= 'IP4Address';}
+                 "ip4block:cidr"     { $parenttag = 'cidr';$parenttype= 'IP4Block';}
+                 default { }
+              }
+           }
+      }
+      # does exist the tag
+      $msg='OK. Tag group '+$data['taggroup']+' exists (id='+$taggroupFound.id+')';
       sendMessages -typmsg "DEBUG" -msg $msg;
       $properties = ""
-	  if ($data["description"] -ne "") {
-         $properties = $properties+ "description" + "=" + $data["description"]+'|';
-      } else {
-         $properties = $properties+ "description" + "=" + "VLAN" + $data["name"] +'|';
-      }
-	  if ($data["descr_tag"] -ne "") {
-         $properties = $properties+ "descr_tag" + "=" + $data["descr_tag"]+'|';
-      } else {
-         $properties = $properties+ "descr_tag" + "=" + "VLAN" + $data["name"] +'|';
-      }
-      $TagFound = $wsdl.getEntityByName($TaggroupFoundId,$data["name"],"Tag")
-      if ( $data["name"] -eq $TagFound.name ) {
-        $msg= "Tag " + $data["name"] + " exists (id=" +$TagFound.id + "). Not needed to create it.";
-        if ($msgerror -ne "") {
-           $msg= $msg + ' ('+$msgerror+')';
+      if ($parentobject -eq '' ) { $listexcludedfields= 'id,name,taggroup,config-name'; }
+      else { $listexcludedfields= 'id,name,taggroup,config-name'+','+$parentobject.ToLower(); }
+      foreach ($fieldn in $global:aFieldsTag) {
+        $ti = $fieldn.ToLower();
+        if  ( -not ($listexcludedfields.Contains($ti) ) ) {
+          switch -wildcard ($ti) {
+             "title*" { }
+             default {
+                if ($data.containsKey($ti)) { $val = $data[$ti]; }
+                else { $val=""; }
+                  $properties = $properties+ $fieldn +"="+ $val + '|';
+               }
+          }
         }
+      }
+      $TagFound = $wsdl.getEntityByName($taggroupFound.id,$data["name"],"Tag");
+      $msgadditional = '';
+      if ((($TagFound -ne $null ) -and ($TagFound.id -ne 0 )) ) {
+        $msg= "Tag " + $data["name"] + " exists already (id=" +$TagFound.id + ").";
+        $msgadditional = 'Already exists.';
+        if ($msgerror -ne "") { $msg= $msg + ' ('+$msgerror+')'; }
         sendMessages -typmsg "DEBUG" -msg $msg;
-      } else {
-        $msg = "Needed creation of tag "+$data["name"]+" in the group "+$data["taggroup"]+" with properties=$properties";
-		sendMessages -typmsg "DEBUG" -msg $msg
-        try {
-            $TagFoundId = $wsdl.addTag($taggroupFoundId,$data["name"],$properties)
-        } catch {
-            $msgerror = $_.Exception.Message;
-            $errmsgno=$ERRTAG2;
-            $msg="Cannot create a new tag "+$data["name"]+". error="+$msgerror;
-            sendMessages -typmsg "ERROR" -msg $msg;
-        }
-        if ($errmsgno -eq 0) {
-           $msg = "Creation of tag done. TAG="+$TagFound.name+" in the group "+$data["taggroup"]+" with properties=$properties";
-		   sendMessages -typmsg "OK" -msg $msg
-           $TagFound = $wsdl.getEntityByID($TagFoundId)
+        if ( -not $IfExistDelete ) {
+          # no FORCE option
+          $errmsgno=$ERRTAG2;
+        } else {
+          if ( ($errmsgno -eq 0) -and ( $IfExistDelete -eq 1)) {
+            if (deleteObject -wsdl $wsdl -object $TagFound ) {
+               $errmsgno=- $ERRDEVPRO7;
+            }
+          }
         }
       }
       if ($errmsgno -eq 0) {
-        # link the object
-        if ($data["parentobject"] -ne "") {
-          $msg ="Begin of tagging the object "+$data["parentobject"]+" to "+$data["name"];
-	      sendMessages -typmsg "INFO" -msg $msg
-          #search object in the Blocks and networks
-          $Allblocks = $wsdl.getEntities($cfgid,"IP4Block",0,1000)
-          $Thenet=$null
-          foreach ($Block in $Allblocks) {
-            if ( $Block.id -ne 0) {
-                $net=$wsdl.getEntityByCIDR($Block.id,$data["parentobject"],"IP4Network");
-                if ($net.id -ne 0) {
-                  $Thenet=$net;
-                  break;
-                }
-            }
+        $msg = "Preparing creation of tag "+$data["name"]+" in the group "+$data["taggroup"]+" with properties=$properties";
+        sendMessages -typmsg "DEBUG" -msg $msg
+        try {
+          $TagFoundID = $wsdl.addTag($taggroupFound.id,$data["name"],$properties);
+          if ($TagFoundID -eq 0) { $errmsgno=$ERRTAG2; }
+          else {
+            $TagFound = $wsdl.getEntityByID($TagFoundID);
+            $msg = 'Creation of tag done. TAG=' + $TagFound.name + ' in the group ' + $data["taggroup"] + ' with properties=' + $TagFound.properties;
+            sendMessages -typmsg "OK" -msg $msg;
           }
-	      if ( $Thenet -ne $null ) {
-           #object found ... possible to link
-           $ltags = $wsdl.getlinkedEntities($Thenet.id,"Tag",0,1000);
-           if ($ltags.id -contains $TagFound.id) {
-                $msg ="The object "+$Thenet.name+' ('+$Thenet.id+') [searched='+$data['parentobject']+'] has already '+$TagFound.name+' ('+$TagFound.id+') [searched '+$data["name"]+'] as TAG.'
+          $msgerror = 0;
+        } catch {
+          $msgerror = $_.Exception.Message;
+          $errmsgno=$ERRTAG2;
+        }
+      }
+      if ($errmsgno -ne 0) {
+          $msg='Cannot create a new tag '+$data["name"]+'.' + $msgadditional;
+          if ($msgerror -ne "") { $msg= $msg + ' ('+$msgerror+')'; }
+          sendMessages -typmsg "ERROR" -msg $msg;
+      }
+      # LINK the TAG to objects
+      if ($errmsgno -eq 0) {
+        # link the object
+        if ($data.containsKey('CONFIG-NAME')) {
+          $cfgname = $data['CONFIG-NAME'];
+          $cfgid= searchConfiguration -wsdl $wsdl -configname $data['CONFIG-NAME'];
+        }
+        if ($cfgid -eq 0) {
+          $e = showError -code $ERRTAG4 -fields $parent+';'+$cfgname+';'+$cfgname;
+        } else {
+         #search if parent exists
+         if (($data.containsKey($parentobject) -eq 1) -and ($data[$parentobject] -ne "")) {
+          $parentstring = $data[$parentobject];
+          $parentlist = $parentstring.split(';');
+          foreach ($parent in $parentlist) {
+            $parentObjectFound = @{id=0;};
+            try {
+              switch ($parenttype.toLower()) {
+                 "ip4network"   { $a=$parent.split('/'); $parentObjectFound =$wsdl.getIPRangedByIP($cfgid,'IP4Network',$a[0]); }
+                 "ip4address"   { $parentObjectFound = $wsdl.getIP4address($cfgid,$parent);}
+                 "ip4block"     { $a=$parent.split('/'); $parentObjectFound = $wsdl.getIPRangedByIP($cfgid,'IP4Block',$a[0]); }
+                 default { }
+              }
+            } catch {
+              $msgerror = $_.Exception.Message;
+              $errmsgno=$ERRTAG3;
+            }
+            if ($errmsgno -eq 0) {
+              $msg ='Parent ' + $parent + ' of typ ' + $parenttype + ' found in configuration ' + $cfgid + '. ID=' + $parentObjectFound.id + ' NAME=' + $parentObjectFound.name + ' properties=' + $parentObjectFound.properties;
+	          sendMessages -typmsg "DEBUG" -msg $msg;
+            } else {
+              $msg ='Not found parent ' + $parent + ' of typ ' + $parenttype +' in configuration ' + $cfgid +'. error='+$msgerror;
+              sendMessages -typmsg "ERROR" -msg $msg;
+            }
+	        if ( ($errmsgno -eq 0) -and ($parentObjectFound.id -ne 0))  {
+              #object found ... possible to link
+              $ltags = $wsdl.getlinkedEntities($parentObjectFound.id,"Tag",0,1000);
+              if ($ltags.id -contains $TagFound.id) {
+                $msg ="The object "+$parentObjectFound.name+' ('+$parentObjectFound.id+') [searched='+$parent+'] has already '+$TagFound.name+' ('+$TagFound.id+') [searched '+$data["name"]+'] as TAG.'
                 sendMessages -typmsg "INFO" -msg $msg
-           } else {
+              } else {
                 try {
-                   $wsdl.linkEntities($TagFound.id,$Thenet.id,"")
+                   $result = $wsdl.linkEntities($TagFound.id,$parentObjectFound.id,"")
                 } catch {
                    $msgerror = $_.Exception.Message;
                    $errmsgno=$ERRTAG3;
-                   $msg="Cannot link "+$data["parentobject"]+" to the TAG "+$data["name"]+". error="+$msgerror;
-                   sendMessages -typmsg "ERROR" -msg $msg;
                 }
   	            if ( $errmsgno -eq 0 ) {
-                   $msg = "Tagging the object "+ $Thenet.name+" with tag "+$data["name"]+" done."
+                   $msg = "Tagging the object "+ $parentObjectFound.name+" with tag "+$data["name"]+" done."
                    sendMessages -typmsg "OK" -msg $msg
+                } else {
+                   $msg="Cannot link "+$parent+" to the TAG "+$data["name"]+". error="+$msgerror;
+                   sendMessages -typmsg "ERROR" -msg $msg;
                 }
+              }
+            } else {
+              #impossible to link if not exist
+              $e = showError -code $ERRTAG4 -fields $parent+';'+$cfgname+';'+$data["name"];
             }
-          } else {
-            #impossible to link if not exist
-            $msg = "Cannot find the object="+$data["parentobject"]+" for the tag "+$data["name"]+". Nothing will be linked.";
-            sendMessages -typmsg "ERROR" -msg $msg
-          }
+           }
         }
+       }
       }
    } else {
-      $errmsgno=$ERRTAG1;
-      $msg='Tag group '+$data["taggroup"]+' does not exist. Cannot add objet '+$data["name"]+'. error='+$msgerror;
-      sendMessages -typmsg "ERROR" -msg $msg;
+      $para = $data["taggroup"]+';'+$data["name"]+';'+$msgerror;
+      $e = showError -code $ERRTAG1 -fields $para;
    }
 }
-
 
 ##############################################
 # modify Tag
 # input:
 #   @wsdl   WSDL proxyobject
 #   @cfgid  ID of configuration
-#   @range  found block ornull
 #   @data   data to add
 # return:
 #   @none
 ##############################################
-function modifyTags($wsdl, $cfgid, $range,$data,$fields) {
+function modifyTags($wsdl, $cfgid,$data,$fields) {
+   $cfgname = $cfgid;
    $errmsgno=0;
-   $TaggroupFoundId = 0;
    try {
      $taggroupFound = $wsdl.getEntityByName(0,$data["taggroup"],"TagGroup");
-     $TaggroupFoundId= $TaggroupFound.id;
      $msgerror= "";
    } catch {
      $errmsgno=$ERRTAG1;
      $msgerror= $_.Exception.Message;
    }
-   if (($errmsgno -eq 0) -and ($taggroupFound -ne $null) -and ($taggroupFoundId -ne 0) -and ($data["taggroup"] -eq $taggroupFound.name) ) {
+   if (($errmsgno -eq 0) -and ($taggroupFound -ne $null) -and ($taggroupFound.id -ne 0) -and ($data["taggroup"] -eq $taggroupFound.name) ) {
+      # search the parent object
+      $parentobject ="";
+      $parenttag = "";
+      $parenttype= 'IP4Network';
+      $listpossibleparent = 'cidr,ip4network:cidr,ip4address,ip4address:ip,ip4block:cidr';
+      foreach ($fieldn in $global:aFieldsTag) {              
+           $ti = $fieldn.ToLower();
+           if  ($listpossibleparent.Contains($ti) ) {
+              $parentobject = $fieldn;
+              switch ($ti) {
+                 "cidr"              { $parenttag = 'cidr'; $parenttype= 'IP4Network';}
+                 "ip4network:cidr"   { $parenttag ='cidr'; $parenttype= 'IP4Network';}
+                 "ip4address"        { $parenttag = 'IP4Address';  $parenttype= 'IP4Address';}
+                 "ip4address:ip"     { $parenttag = 'IP4Address';  $parenttype= 'IP4Address';}
+                 "ip4block:cidr"     { $parenttag = 'cidr';$parenttype= 'IP4Block';}
+                 default { }
+              }
+           }
+      }
+      # does exist the tag
       $msg="Tag group "+$data["taggroup"]+" exists (id="+$taggroupFound.id+")";
       sendMessages -typmsg "DEBUG" -msg $msg;
-      $properties = 0
-      $TagFound = $wsdl.getEntityByName($TaggroupFoundId,$data["name"],"Tag")
+      try {
+        $TagFound = $wsdl.getEntityByName($taggroupFound.id,$data["name"],"Tag");
+        $msgerror= "";
+      } catch {
+        $errmsgno=$ERRTAG1;
+        $msgerror= $_.Exception.Message;
+      }
       if ( $data["name"] -ne $TagFound.name ) {
-        $ErrorMessage = $_.Exception.Message;
         $msg= 'Tag ' + $data["name"] + ' does not exist! Create it before.';
-        if ($ErrorMessage -ne "") {
-           $msg= $msg + " ("+$ErrorMessage+")";
+        if ($msgerror -ne "") {
+           $msg= $msg + " ("+$msgerror+")";
         }
         sendMessages -typmsg "DEBUG" -msg $msg;
       } else {
         # change porperties
-        $properties=0;
-        if ($data["descr_tag"] -ne "") {
-          $tmpprop= $TagFound.properties;
-          $new=$data["descr_tag"]; if ($data["descr_tag"] -eq "''") { $new="";}
-          if (!$tmpprop.contains("descr_tag="+$new+'|') ) {
-             $properties=1;
-             if ( $tmpprop.contains("descr_tag=")) {
-              $a="descr_tag="+$new;
-              $deb=$tmpprop.IndexOf("descr_tag=");
-              $lg=$tmpprop.IndexOf('|',$deb)-$deb; 
-              $b=$tmpprop.Substring($deb,$lg);
-              $tmpprop = $tmpprop.replace($b,$a);
-              $TagFound.properties= $tmpprop;
-             } else {
-                 $tmpprop = $tmpprop + "descr_tag="+$new+'|';
-                 $TagFound.properties= $tmpprop;
-             }
-          }
-        }
-        if ($data["description"] -ne "") {
-          $tmpprop= $TagFound.properties;
-          $new=$data["description"]; if ($data["description"] -eq "''") { $new="";}
-          if (!$tmpprop.contains("description="+$new+'|')) {
-             $properties=1;
-             if ( $tmpprop.contains("description=")) {
-              $a="description="+$new;
-              $deb=$tmpprop.IndexOf("description=");
-              $lg=$tmpprop.IndexOf('|',$deb)-$deb; 
-              $b=$tmpprop.Substring($deb,$lg);
-              $tmpprop = $tmpprop.replace($b,$a);
-              $TagFound.properties= $tmpprop;
-             } else {
-                 $tmpprop = $tmpprop + "description="+$new+'|';
-                 $TagFound.properties= $tmpprop;
-             }
+        $propertiesnb = 0;
+        $properties = "";
+        $tmpprop= $TagFound.properties;
+        if ($parentobject -eq '' ) { $listexcludedfields= 'id,name,taggroup,config-name'; }
+        else { $listexcludedfields= 'id,name,taggroup,config-name'+','+$parentobject.ToLower(); }
+        foreach ($fieldn in $global:aFieldsTag) {
+          $ti = $fieldn.ToLower();
+          if  ( -not ($listexcludedfields.Contains($ti) ) ) {
+            switch -wildcard ($ti) {
+               "title*" { }
+               default {
+                  if ($data.containsKey($ti)) { $new = $data[$ti]; }
+                  else { $new=""; }
+                  if ($new -ne "") {
+                    $tmpprop= $TagFound.properties;
+                    if (!$tmpprop.Contains($fieldn + '='+$new+'|')) {
+                       $propertiesnb=1;
+                       if ( $tmpprop.contains($fieldn+"=")) {
+                         $a= $fieldn + "="+$new;
+                         $deb=$tmpprop.IndexOf($fieldn+"=");
+                         $lg=$tmpprop.IndexOf('|',$deb)-$deb; 
+                         $b=$tmpprop.Substring($deb,$lg);
+                         $tmpprop = $tmpprop.replace($b,$a);
+                         $TagFound.properties= $tmpprop;
+                       } else {
+                        $tmpprop = $tmpprop + $fieldn + '='+ $new + '|';
+                        $TagFound.properties= $tmpprop;
+                       }
+                    }
+                  }
+                }
+            }
           }
         }
         #begin to modify
@@ -1336,53 +1521,63 @@ function modifyTags($wsdl, $cfgid, $range,$data,$fields) {
            sendMessages -typmsg "ERROR" -msg $msg;
            $errmsgno=1;
          }
-       }
-       if ($errmsgno -eq 0) {
+        }
+        if ($errmsgno -eq 0) {
          $msg= "Update of TAG="+$TagFound2.name+" done with properties="+$TagFound2.properties+".";
          sendMessages -typmsg "OK" -msg $msg;
-       }
-       #begin to link
+        }
+        # LINK the TAG to objects
        if ($errmsgno -eq 0) {
         # link the object
-        if ($data["parentobject"] -ne "") {
-          $msg ="Begin of tagging the object "+$data["parentobject"]+" to "+$data["name"];
-	      sendMessages -typmsg "INFO" -msg $msg
-          #search object in the Blocks and networks
-          $Allblocks = $wsdl.getEntities($cfgid,"IP4Block",0,1000)
-          $Thenet=$null
-          foreach ($Block in $Allblocks) {
-            if ( $Block.id -ne 0) {
-                $net=$wsdl.getEntityByCIDR($Block.id,$data["parentobject"],"IP4Network");
-                if ($net.id -ne 0) {
-                  $Thenet=$net;
-                  break;
-                }
+        if (($data.containsKey($parentobject) -eq 1) -and ($data[$parentobject] -ne "")) {
+          $parentstring = $data[$parentobject];
+          $parentlist = $parentstring.split(';');
+          foreach ($parent in $parentlist) {
+            $parentObjectFound = @{id=0;};
+            try {
+              switch ($parenttype.ToLower()) {
+                 "ip4network"        { $a=$parent.split('/'); $parentObjectFound =$wsdl.getIPRangedByIP($cfgid,'IP4Network',$a[0]); }
+                 "ip4address"        { $parentObjectFound = $wsdl.getIP4address($cfgid,$parent);}
+                 "ip4block"     { $a=$parent.split('/');$parentObjectFound = $wsdl.getIPRangedByIP($cfgid,'IP4Block',$a[0]); }
+                 default { }
+              }
+            } catch {
+              $msgerror = $_.Exception.Message;
+              $errmsgno=$ERRTAG3;
             }
-          }
-	      if ( $Thenet -ne $null ) {
-           #object found ... possible to link
-           $ltags = $wsdl.getlinkedEntities($Thenet.id,"Tag",0,1000);
-           if ($ltags.id -contains $TagFound.id) {
-                $msg ="The object "+$Thenet.name+" ("+$Thenet.id+") [searched="+$data["parentobject"]+"] has already "+$TagFound.name+" ("+$TagFound.id+") [searched "+$data["name"]+"] as TAG."
+            if ($errmsgno -eq 0) {
+              $msg ='Parent ' + $parent + ' of typ ' + $parenttype + ' found in config=' + $cfgid + '. ID=' + $parentObjectFound.id + ' NAME=' + $parentObjectFound.name + ' properties=' + $parentObjectFound.properties;
+	          sendMessages -typmsg "DEBUG" -msg $msg;
+            } else {
+              $msg ='Not found parent ' + $parent + ' of typ ' + $parenttype +". error="+$msgerror;
+              sendMessages -typmsg "ERROR" -msg $msg;
+            }
+	        if ( ($errmsgno -eq 0) -and ($parentObjectFound.id -ne 0))  {
+              #object found ... possible to link
+              $ltags = $wsdl.getlinkedEntities($parentObjectFound.id,"Tag",0,1000);
+              if ($ltags.id -contains $TagFound.id) {
+                $msg ="The object "+$parentObjectFound.name+' ('+$parentObjectFound.id+') [searched='+$parent+'] has already '+$TagFound.name+' ('+$TagFound.id+') [searched '+$data["name"]+'] as TAG.'
                 sendMessages -typmsg "INFO" -msg $msg
-           } else {
+              } else {
                 try {
-                   $wsdl.linkEntities($TagFound.id,$Thenet.id,"")
+                   $result = $wsdl.linkEntities($TagFound.id,$parentObjectFound.id,"")
                 } catch {
                    $msgerror = $_.Exception.Message;
                    $errmsgno=$ERRTAG3;
-                   $msg="Cannot link "+$data["parentobject"]+" to the TAG "+$data["name"]+". error="+$msgerror;
-                   sendMessages -typmsg "ERROR" -msg $msg;
                 }
   	            if ( $errmsgno -eq 0 ) {
-                   $msg = "Tagging the object "+ $Thenet.name+" with tag "+$data["name"]+" done."
+                   $msg = "Tagging the object "+ $parentObjectFound.name+" with tag "+$data["name"]+" done."
                    sendMessages -typmsg "OK" -msg $msg
+                } else {
+                   $msg="Cannot link "+$parent+" to the TAG "+$data["name"]+". error="+$msgerror;
+                   sendMessages -typmsg "ERROR" -msg $msg;
                 }
+              }
+            } else {
+              #impossible to link if not exist
+              $msg = "Cannot find the object="+$parent+" for the tag "+$data["name"]+". Cannot be linked.";
+              sendMessages -typmsg "ERROR" -msg $msg
             }
-          } else {
-            #impossible to link if not exist
-            $msg = "Cannot find the object="+$data["parentobject"]+" for the tag "+$data["name"]+". Nothing will be linked.";
-            sendMessages -typmsg "ERROR" -msg $msg
           }
         }
        }
@@ -1395,44 +1590,6 @@ function modifyTags($wsdl, $cfgid, $range,$data,$fields) {
 }
 
 ##############################################
-# delete IP
-# input:
-#   @wsdl   WSDL proxyobject
-#   @cfgid  ID of configuration
-#   @range  found block ornull
-#   @data   data to add
-# return:
-#   @none
-##############################################
-function deleteIP($wsdl, $cfgid, $range,$data,$fields) {
-   $noterror=1;
-   $errmsgno=0;
-   if ($errmsgno -eq 0) {
-       $subtypid=$deviceSubTypeFound.id;
-       $IPFound = $wsdl.getIP4Address($cfgid, $data["ip"]); 
-       $cfg = $wsdl.getEntityById($cfgid);
-       $msgerror= "";
-       if (($IPFound -eq $null ) -or ($IPFound.id -eq 0 ))  {
-          $errmsgno=$ERRDEV1;
-          $msg = "Delete not needed. The IP "+$data["ip"]+" doesn`'t exist already in this configuration (" + $cfg.name + ")! "+" error="+$msgerror;
-          sendMessages -typmsg "INFO" -msg $msg;
-       } else {
-         try {
-			 $resultDelete = $wsdl.delete($IPFound.id);
-             $msg = "Deleting IP id="+$IPFound.id+" name="+$IPFound.Name+" properties="+$IPFound.properties;
-             sendMessages -typmsg "OK" -msg $msg;
-         } catch {
-             $errmsgno=$ERRDEVPRO7;
-             $msgerror= $_.Exception.Message;
-             $msg = "Error by deleting IP id="+$IPFound.id+" name="+$IPFound.Name+" properties="+$IPFound.properties+" error="+$msgerror;
-             sendMessages -typmsg "ERROR" -msg $msg;
-         }
-      }
-   }
-}
-
-
-##############################################
 # find subnet by CIDR
 # input:
 #   @wsdl   WSDL proxyobject
@@ -1441,57 +1598,60 @@ function deleteIP($wsdl, $cfgid, $range,$data,$fields) {
 # return:
 #   @none
 ##############################################
-function searchSubnet($wsdl, $cfgid, $data) {
-   $cfgname= $data["2"];
-   [string] $subn   = $data["1"];
+function searchSubnet($wsdl, $data) {
+   if ($global:nFieldsSearchSub.containsKey('cidr')) {
+     $idx= ''+$global:nFieldsSearchSub['cidr']
+     $subn= $data[$idx];
+   } else {
+     $subn = 'missing';
+   }
+   if ($global:nFieldsSearchSub.containsKey('configuration')) {
+     $idx= ''+$global:nFieldsSearchSub['configuration'];
+     $cfgname= $data[$idx];
+     if (-not ($data.containsKey($idx))) { $cfgname ='all';}
+     else { $cfgname= $data[$idx]; }
+   } else {
+     $cfgname = 'all';
+   }
    $ipa = $subn.split('/');
    $ip = $ipa[0];
    $msg= 'search subnet ' + $subn + ' for configuration ' + $cfgname + ' where ip=' + $ip;
-   sendMessages -typmsg "OK" -msg $msg;
-   #$blocks= $wsdl.getEntities(20,"IP4Block",0,1000).id;
-   #foreach ($block in $blocks) { $net=$wsdl.getEntityByCIDR($block,"146.109.19.0/24","IP4Network");
-   #if ($net.id -ne 0) { write-Host "FOUND=" $net.name `n; } }
+   sendMessages -typmsg "INFO" -msg $msg;
    $msgerror= "";
    $cfglist = @();
    if ($cfgname -eq 'all') {
      try {
        $cfglist = $wsdl.getEntities(0,"Configuration",0,50);
      } catch {
-#$cfglist=@( @{id=1;Name="DEBUGGING";}, @{id=2;Name="DEBUGGING-2";}, @{id=3;Name="DEBUGGING-3";});
        $msgerror= $_.Exception.Message;
      }
    } else {
      try {
        $configFound = $wsdl.getEntityByName("0",$cfgname,"Configuration");
-#$configFound=@{id=1;Name="DEBUGGING";};
-       $cfglist += $configFound;
+       if ($configFound.id -eq 0) {
+         $msgerror= 'config not found';
+       } else {
+         $cfglist += $configFound;
+       }
      } catch {
        $msgerror= $_.Exception.Message;
      }
    }
-   if (($debugging -ne 'YES') -and ($msgerror -ne '' )) {
+   if ($msgerror -ne '' ) {
        if ($cfgname -eq 'all') { $msg1= ' no configuration found.';}
        else { $msg1 = $cfgname + ' not found.'; }
        $msg = "Error " + $msg1 + " Error="+$msgerror;
        sendMessages -typmsg "ERROR" -msg $msg;
-       return;
    }
    $nosubfound = 1;
    foreach ($configFound in $cfglist) {
      try {
        $subnetFound = $wsdl.getIPRangedByIP($configFound.id,"IP4Network",$ip);
+       $msg = 'found subnet NAME='+$subnetFound.name+' ID='+$subnetFound.id+' properties='+$subnetFound.properties;
+       sendMessages -typmsg "DEBUG" -msg $msg;
      } catch {
-       $msg = 'Error in searching subnet '+$subn+'. ' + $_.Exception.Message;
+       $msg = 'Error in searching subnet '+$subn+' in configuration '+$configFound.Name+'. ' + $_.Exception.Message;
        sendMessages -typmsg "ERROR" -msg $msg;
-#if ($debugging -eq 'YES') {
-#$subnetDebug=@(
-#@{id=0;Name="DebugName0";properties=''}
-#,@{id=1;Name="DebugName1";properties='VLAN=myvlandebug|descr_subnet=testing&Debugging|CIDR=10.1.0.0/24|allowDuplicateHost=disable|TESTED=|inheritAllowDuplicateHost=true';}
-#,@{id=2;Name="DebugName2";properties='VLAN=myvlandebug|descr_subnet=testing&Debugging|CIDR=10.1.0.0/24|allowDuplicateHost=disable|TESTED=|inheritAllowDuplicateHost=true';}
-#,@{id=3;Name="DebugName3";properties='VLAN=myvlandebug|descr_subnet=testing&Debugging|CIDR=10.1.0.0/24|allowDuplicateHost=disable|TESTED=|inheritAllowDuplicateHost=true';}
-#);
-#$subnetFound=$subnetDebug[$configFound.id];
-#}
      }
      if (($subnetFound -eq $null) -or ($subnetFound.id -eq 0 )) {
         continue;
@@ -1499,36 +1659,327 @@ function searchSubnet($wsdl, $cfgid, $data) {
        $nosubfound = 0;
        $properties= $subnetFound.properties;
        $tprop=$properties.split('|');
-       $data = @{};
+       $result = @{};
        foreach ($a in $tprop) {
           $b=$a.split('=');
-          $data.Add($b[0],$b[1]);
+          $result.Add($b[0],$b[1]);
        }
-       $msgtitle = 'id,name,configuration';
-       $msgvalues = '' + $subnetFound.id + ',' + $subnetFound.Name + ',' + $configFound.Name;
-       $listexcludedfields= 'id,name';
+       $result.Add('id',$subnetFound.id);
+       $result.Add('name',$subnetFound.Name);
+       $result.Add('configuration',$configFound.Name);
+       $msgtitle = '';
+       $msgvalues = '';
+       $listexcludedfields= '';
        foreach ($fieldn in $global:aFieldsSearchSub) {
           $ti = $fieldn.ToLower();
           if  (-not (($listexcludedfields.Contains($ti) -or $ti.Contains('title'))) ) {
               #properties fields
-              if ($data.containsKey($ti)) {
-                  $val = $data[$ti];
+              if ($result.containsKey($ti)) {
+                  $val = $result[$ti];
                 }
                 else { $val=""; }
-                $msgtitle = $msgtitle+','+ $fieldn;
-                $msgvalues = $msgvalues+','+ $val;
+                if ($msgtitle -eq '') {
+                  $msgtitle = $ti;
+                } else {
+                  $msgtitle = $msgtitle+','+ $ti;
+                }
+                if ($msgvalues -eq '') {
+                  $msgvalues = $val;
+                } else {
+                  $msgvalues = $msgvalues+','+ $val;
+                }
               }
        }
        #$msg = $msgtitle + "`n" + $msgvalues; 
        $msg = $msgvalues; 
-#       $tprop=$tmpprop.split('|');
-#       foreach ($a in $tprop) { $b=$a.split('='); $msg = $msg + ',' + $b[0]; };
-#       $msg= $msg + "`n"; 
-#       $msg = $msg + $subnetFound.id + ',' + $subnetFound.name + ',' + $configFound.Name;
-#       foreach ($a in $tprop) { $b=$a.split('='); $msg = $msg + ',' + $b[1]; };
        sendMessages -typmsg "NORMAL" -msg $msg -out $global:isoutput;
-#       $msg = "The Subnet "+$subn+' exist in configuration ' + $configFound.Name + '. Actual object is id='+$subnetFound.id+" cfg="+$configFound.Name + " properties=" + $tmpprop; 
-#       sendMessages -typmsg "OK" -msg $msg;
+     }
+   }
+   if ($nosubfound -eq 1) {
+       if ($cfgname -eq 'all') {  $msg1= 'none of the configurations'; }
+       else { $msg1 = 'configuration '+$cfgname; }
+       $msg = 'The Subnet '+$subn+' not found in '+$msg1+'.';
+       sendMessages -typmsg "ERROR" -msg $msg;
+   }
+}
+
+##############################################
+# simple get n objects
+# input:
+#   @wsdl     WSDL proxyobject
+#   @cfgname  name configuration
+#   @parentid ID of parent
+#   @type     object's type
+#   @objects  objects'list 
+# return:
+#   @err  error
+##############################################
+function getObjects($wsdl, $filter, $cfgname, $parentid, $type, [ref] $objects ) {
+   $lobjects = @();
+   $err =0;
+   $maxpersession  =2;
+   $beg=0;$nbr=0;
+   if ($parentid -gt 0) {
+     for ($still=1;$still -eq 1;) {
+      try {
+        $listObjectsFound = $wsdl.getEntities($parentid,$type,$beg,$maxpersession);
+        if ($listObjectsFound) {
+          $nbr = $listObjectsFound.count;
+          $nbr2= $nbr;
+          if ($filter -ne '') {
+            $filter1 = $filter.replace('/','');
+            foreach ($obj in $listObjectsFound) {
+              if ($obj.name -match $filter1) {
+                $lobjects += $obj;
+                $nbr2 = $nbr2 +1;
+              }
+            }
+          } else {
+            $lobjects += $listObjectsFound;
+          }
+        } else { $nbr = 0; }
+        if ($filter -ne '') { $msg1 = 'like '+$filter+' '; }
+        else { $msg1 = ''; }
+        $msg = 'searching the objects '+$msg1+'of type '+$type+ ' in configuration '+$cfgname + ' for parent id '+ $parentid +'. Getting from '+$beg+'.'+' Found '+$nbr2+'.';
+        sendMessages -typmsg "DEBUG" -msg $msg;
+      } catch {
+        $err=1;
+        $msgerror= $_.Exception.Message;
+        if ($msgerror -ne '' ) { $msg2 = ' Error='+$msgerror; }
+        else { $msg2 =''; }
+        $msg = 'Error by ' + 'searching the objects of type '+$type+ ' in configuration '+$cfgname + ' for parent id '+ $parentid +'. Getting from '+$beg +'.'+$msg2;
+        sendMessages -typmsg "ERROR" -msg $msg;
+        $still = 0;
+      }
+      $beg = $beg +$nbr;
+      if ( (!$listObjectsFound) -or ($nbr -lt $maxpersession)) {
+        $still = 0;
+      }
+     }
+   }
+   $objects.value = $lobjects;
+   return $err;
+}
+
+##############################################
+# list Devices if name empty means all devices
+# input:
+#   @wsdl   WSDL proxyobject
+#   @cfgid  ID of configuration
+#   @data   data to search
+# return:
+#   @none
+##############################################
+function listDevices($wsdl, $cfgid, $data) {
+   if ($global:nFieldsListDevices.containsKey('filter')) {
+     $idx= ''+$global:nFieldsListDevices['filter']
+     $filter= $data[$idx];
+   } else {
+     $filter = '';
+   }
+   if ($global:nFieldsListDevices.containsKey('configuration')) {
+     $idx= ''+$global:nFieldsListDevices['configuration'];
+     if (-not ($data.containsKey($idx))) { $cfgname ='all';}
+     else { $cfgname= $data[$idx]; }
+     if ($cfgname -eq '') { $cfgname ='all';}
+   } else {
+     $cfgname = 'all';
+   }
+   if ($name -eq '') { $msg1= 'any devices';}
+   else { $msg1 = 'device "'+$name + '"'; }
+   if ($cfgname -eq 'all') { $msg2= ' in all configuration';}
+   else { $msg2 = ' in configuration "'+$cfgname + '"'; }
+   $msg= 'searching '+ $msg1 +$msg2;
+   sendMessages -typmsg "INFO" -msg $msg;
+   $msgerror= "";
+   $cfglist = @();
+   if ($cfgname -eq 'all') {
+     try {
+       $cfglist = $wsdl.getEntities(0,"Configuration",0,50);
+     } catch {
+       $msgerror= $_.Exception.Message;
+     }
+   } else {
+     try {
+       $configFound = $wsdl.getEntityByName("0",$cfgname,"Configuration");
+       if ($configFound.id -eq 0) {
+         $msgerror= 'config not found';
+       } else {
+         $cfglist += $configFound;
+       }
+     } catch {
+       $msgerror= $_.Exception.Message;
+     }
+   }
+   if ($msgerror -ne '' ) {
+       if ($cfgname -eq 'all') { $msg1= ' no configuration found.';}
+       else { $msg1 = $cfgname + ' not found.'; }
+       $msg = "Error " + $msg1 + " Error="+$msgerror;
+       sendMessages -typmsg "ERROR" -msg $msg;
+   }
+   $nodevicefound = 1;
+   foreach ($configFound in $cfglist) {
+     $listObjFound = @();
+     $err = getObjects -wsdl $wsdl -filter $filter -cfgname $configFound.name -parentid $configFound.id -type 'Device' -objects ([ref] $listObjFound);
+     if (($listObjFound -ne $null) -or ($listObjFound.count -gt 0 )) {
+       foreach ($obj in $listObjFound) {
+          $result = @{};
+          $result.Add('configuration',$configFound.Name);
+          $properties = $obj.properties;
+          $tprop=$properties.split('|');
+          foreach ($a in $tprop) {
+             $b=$a.split('=');
+             $result.Add($b[0],$b[1]);
+          }
+          $result.Add('id',$obj.id);
+          $result.Add('name',$obj.name);
+          $result.Add('filter',$filter);
+          $result.Add('type',$obj.type);
+          $msgtitle = '';
+          $msgvalues = '';
+          $listexcludedfields= '';
+          foreach ($fieldn in $global:aFieldsListDevices) {
+            $ti = $fieldn.ToLower();
+            if  (-not (($listexcludedfields.Contains($ti) -or $ti.Contains('title'))) ) {
+              #properties fields
+              if (($result.containsKey($ti)) -or ($ti -eq 'devicetype' -and $result.containsKey('devicetypeid'))) {
+                  if ($ti -eq 'devicetype' -and $result.containsKey('devicetypeid')) {
+                    $typeFound = $wsdl.getEntityById($result['devicetypeid']);
+                    $val = $typeFound.name;
+                  } else { 
+                    $val = $result[$ti];
+                  }
+                  $val = $val.replace(',',';');
+                }
+                else { $val=""; }
+                #if ($msgtitle -eq '') { $msgtitle = $ti; }
+                #else { $msgtitle = $msgtitle+','+ $ti;}
+                if ($msgvalues -eq '') {
+                  $msgvalues = $val;
+                } else {
+                  $msgvalues = $msgvalues+','+ $val;
+                }
+              }
+          }
+          $msg = $msgvalues; 
+          sendMessages -typmsg "NORMAL" -msg $msg -out $global:isoutput;
+       }
+     }
+   }
+}
+
+##############################################
+# list IPs by CIDR
+# input:
+#   @wsdl   WSDL proxyobject
+#   @cfgid  ID of configuration
+#   @data   data to search
+# return:
+#   @listIP in output
+##############################################
+function listIPs($wsdl, $cfgid, $data) {
+   if ($global:nFieldsListIPs.containsKey('cidr')) {
+     $idx= ''+$global:nFieldsListIPs['cidr']
+     $subn= $data[$idx];
+   } else {
+     $subn = 'missing';
+   }
+   if ($global:nFieldsListIPs.containsKey('configuration')) {
+     $idx= ''+$global:nFieldsListIPs['configuration'];
+     if (-not ($data.containsKey($idx))) { $cfgname ='all';}
+     else { $cfgname= $data[$idx]; }
+     if ($cfgname -eq '') { $cfgname ='all';}
+   } else {
+     $cfgname = 'all';
+   }
+   $ipa = $subn.split('/');
+   $ip = $ipa[0];
+   if ($cfgname -eq 'all') { $msg1= ' in all configuration';}
+   else { $msg1 = 'in configuration "'+$cfgname + '"'; }
+   $msg= 'searching IPs in subnet ' + $subn + ' ' +$msg1+ ' where ip=' + $ip;
+   sendMessages -typmsg "INFO" -msg $msg;
+   $msgerror= "";
+   $cfglist = @();
+   if ($cfgname -eq 'all') {
+     try {
+       $cfglist = $wsdl.getEntities(0,"Configuration",0,50);
+     } catch {
+       $msgerror= $_.Exception.Message;
+     }
+   } else {
+     try {
+       $configFound = $wsdl.getEntityByName("0",$cfgname,"Configuration");
+       if ($configFound.id -eq 0) {
+         $msgerror= 'config not found';
+       } else {
+         $cfglist += $configFound;
+       }
+     } catch {
+       $msgerror= $_.Exception.Message;
+     }
+   }
+   if ($msgerror -ne '' ) {
+       if ($cfgname -eq 'all') { $msg1= ' no configuration found.';}
+       else { $msg1 = $cfgname + ' not found.'; }
+       $msg = "Error " + $msg1 + " Error="+$msgerror;
+       sendMessages -typmsg "ERROR" -msg $msg;
+   }
+   $nosubfound = 1;
+   foreach ($configFound in $cfglist) {
+     try {
+       $subnetFound = $wsdl.getIPRangedByIP($configFound.id,"IP4Network",$ip);
+       $msg = 'found subnet NAME='+$subnetFound.name+' ID='+$subnetFound.id+' properties='+$subnetFound.properties;
+       sendMessages -typmsg "DEBUG" -msg $msg;
+     } catch {
+       $msg = 'Error in searching subnet '+$subn+'. ' + $_.Exception.Message;
+       sendMessages -typmsg "ERROR" -msg $msg;
+     }
+     if (($subnetFound -eq $null) -or ($subnetFound.id -eq 0 )) {
+        continue;
+     } else {
+       $nosubfound = 0;
+       $properties= $subnetFound.properties;
+       $listIPFound = $wsdl.getNetworklinkedProperties($subnetFound.id);
+       foreach ($oneip in $listIPFound) {
+          $result = @{};
+          $result.Add('cidr',$subn);
+          $result.Add('configuration',$configFound.Name);
+          $properties = $oneip.properties;
+          $tprop=$properties.split('|');
+          foreach ($a in $tprop) {
+             $b=$a.split('=');
+             $result.Add($b[0],$b[1]);
+          }
+          $result.Add('id',$oneip.id);
+          $result.Add('name',$oneip.name);
+          $result.Add('type',$oneip.type);
+          if ($result.containsKey('address')) {
+             $result.Add('ip',$result['address']);
+             $result.Add('ipv4address',$result['address']);
+          }
+          $msgtitle = '';
+          $msgvalues = '';
+          $listexcludedfields= '';
+          foreach ($fieldn in $global:aFieldsListIPs) {
+            $ti = $fieldn.ToLower();
+            if  (-not (($listexcludedfields.Contains($ti) -or $ti.Contains('title'))) ) {
+              #properties fields
+              if ($result.containsKey($ti)) {
+                  $val = $result[$ti];
+                }
+                else { $val=""; }
+                #if ($msgtitle -eq '') { $msgtitle = $ti; }
+                #else { $msgtitle = $msgtitle+','+ $ti;}
+                if ($msgvalues -eq '') {
+                  $msgvalues = $val;
+                } else {
+                  $msgvalues = $msgvalues+','+ $val;
+                }
+              }
+          }
+          $msg = $msgvalues; 
+          sendMessages -typmsg "NORMAL" -msg $msg -out $global:isoutput;
+       }
      }
    }
    if ($nosubfound -eq 1) {
@@ -1538,29 +1989,143 @@ function searchSubnet($wsdl, $cfgid, $data) {
 }
 
 ##############################################
+# add comment in output
+# input:
+#   @wsdl   WSDL proxyobject
+#   @cfgid  ID of configuration
+#   @data   data with comment
+# return:
+#   @comment in output
+##############################################
+function addCommentOutput($wsdl, $cfgid, $data) {
+  $msg='';
+  foreach ($c in $data.Keys) {
+   if (($c -ne '0') -and ($c -ne 'action')) {
+     if ($msg -eq '') { $msg= $data[$c]; } else { $msg = $msg + ',' + $data[$c]; }
+   }
+  }
+  if ($msg -ne '') { sendMessages -typmsg "NORMAL" -msg $msg -out $global:isoutput; }
+}
+
+Set-Variable INIT1   -value '-1' #-option Constant 
+Set-Variable INIT2   -value '-2' #-option Constant 
+Set-Variable INIT3   -value '-3' #-option Constant 
+Set-Variable ERRDEV1    -value '1' #-option Constant 
+Set-Variable ERRDEVPRO1 -value '2' #-option Constant 
+Set-Variable ERRDEVPRO2 -value '3' #-option Constant 
+Set-Variable ERRDEVPRO3 -value '4' #-option Constant 
+Set-Variable ERRDEVPRO4 -value '5' #-option Constant 
+Set-Variable ERRDEVPRO5 -value '6' #-option Constant 
+Set-Variable ERRDEVPRO6 -value '7' #-option Constant 
+Set-Variable ERRDEVPRO7 -value '8' #-option Constant 
+Set-Variable ERRDEVPRO8 -value '9' #-option Constant 
+Set-Variable ERRDEVPRO10 -value '10' #-option Constant 
+Set-Variable ERRDEVTYP1 -value '20' #-option Constant 
+Set-Variable ERRDEVTYP2 -value '21' #-option Constant 
+Set-Variable ERRTAG1    -value '22' #-option Constant 
+Set-Variable ERRTAG2    -value '23' #-option Constant 
+Set-Variable ERRTAG3    -value '24' #-option Constant 
+Set-Variable ERRTAG4    -value '24' #-option Constant 
+Set-Variable ERRTAG5    -value '25' #-option Constant 
+Set-Variable ERRFUNC1   -value '31' #-option Constant 
+Set-Variable ERRFUNC2   -value '32' #-option Constant 
+Set-Variable ERRFUNC3   -value '33' #-option Constant 
+Set-Variable ERRFUNC4   -value '34' #-option Constant 
+Set-Variable ERRSUBADDPRO1   -value '41' #-option Constant 
+Set-Variable ERRSUBADDPRO2   -value '42' #-option Constant 
+Set-Variable ERRSUBADDPRO3   -value '43' #-option Constant 
+Set-Variable ERRSUBADDPRO4   -value '44' #-option Constant 
+Set-Variable ERRCFG1   -value '100' #-option Constant 
+Set-Variable ERRIP1   -value '110' #-option Constant 
+Set-Variable ERRIP2   -value '111' #-option Constant 
+Set-Variable ERRIP3   -value '112' #-option Constant 
+Set-Variable ERRIPDEL1   -value '120' #-option Constant 
+Set-Variable ERRIPDEL2   -value '121' #-option Constant 
+Set-Variable ERRINIT3   -value '130' #-option Constant 
+Set-Variable ERRINIT4   -value '131' #-option Constant 
+
+##############################################
+# get the message (exemaple error message
+#   in the future the message will be loaded from a error file message
+#   the fields will replace the variables #1#, #2#, #3#, .....
+# input:
+#   @code code error
+#   @fields additional fields semi-coloumn separated
+# return:
+#   @msg error message
+##############################################
+function getMessage($code,$fields='') {
+ $msg='...!';
+ #message are temporary local, in future in a file
+ $error=@{}
+ $error["$ERRFUNC2"]= "No configuration found! Cannot apply other changes";
+ $error["$ERRFUNC3"]= "Wrong action! Should be one of these values #1# ! You choose #2#.";
+ $error["$ERRFUNC4"]= "No IP-subnetfound.";
+ $error["$ERRFUNC1"]= 'file #1# cannot be read or does not exist!';
+ $error["$ERRCFG1"] = 'Missing configuration or configuration #1# invalid.';
+ $error["$INIT1"] = 'creating Log-file.';
+ $error["$INIT2"] = 'Error on logout #1#.';
+ $error["$INIT3"] = "Configuration '#1#' found, Configuration ID = #2#";
+ $error["$ERRINIT3"] = "Configuration '#1#' not found! #2#";
+ $error["$ERRINIT4"] = "Message level '#1#' not in the list of levels '#2#'.";
+ $error["$ERRTAG4"] = "Cannot find the parent object=#1# in configuration '#2#' for the tag '#3#'. Cannot do the link!";
+ $error["$ERRTAG1"] = "Tag group '#1#' does not exist. Cannot add objet '#2#'.#3#";
+ $listfields = $fields.split(';');
+ if ($error.containsKey($code)) {
+   $msg = $error[$code];
+   $i=1;
+   foreach ($f in $listfields){
+     $msg = $msg.replace('#'+$i+'#',$f);
+     $i++;
+   }
+ } else {
+   $msg = $msg + $fields;
+ }
+ return $msg;
+}
+
+##############################################
+# show error message
+#   the fields will replace the variables #1#, #2#, #3#, .....
+# input:
+#   @code code error
+#   @fields additional fields semi-coloumn separated
+# return:
+#   @code error code
+##############################################
+function showError($code,$fields='') {
+  $msg= getMessage -code $code -field $fields;
+  sendMessages -typmsg "ERROR" -msg $msg;
+  return $code;
+}
+
+##############################################
 # Main function
 # input: none
 # return: none
 ##############################################
-function main() {
+function main($ip,$isout,$user,$password) {
  sendMessages -typmsg "DEBUG" -msg "---------- BEGIN -------------"
- $step= 0;
  $errmsgno= 0;
- $userAPI=$pwAPI="";
+ $userAPI= $user;
+ $pwAPI= $password;
  $theInput="";
  $containerFile="";
- $error=@{}
- $error[$ERRFUNC1]= 'cannot be read or doesnt exist!';
+ $cfgid = 0;
+ $cfgname = '';
  $lista= ""; foreach ($a in $listActions) { $lista= $lista+","+$a; }
- $error[$ERRFUNC2]= "No configuration found! Cannot apply other changes";
- $error[$ERRFUNC3]= "Wrong action! Should be one of these values $lista !";
- $error[$ERRFUNC4]= "No IP-subnetfound.";
- getInputs -name ([ref]$userAPI) -pass ([ref]$pwAPI) -input ([ref]$theInput) -out ([ref] $isoutput);
+ if ($global:logoverwrite -eq 'YES') {
+     $msg = 'creating Log-file.';
+     Write-Output $msg | Out-File $LOG_FILE
+ }
+ if ($global:outputoverwrite -eq 'YES') {
+     $msg = '';
+     Write-Output '' | Out-File $OUTPUT_FILE
+ }
+ getInputs -name ([ref]$userAPI) -pass ([ref]$pwAPI) -ip ([ref]$ip) -out ([ref] $isout);
 
  if (-not( Test-Path $INPUT_FILE) ) {
-    $errmsgno=$ERRFUNC1;
-    $msg= $INPUT_FILE+" " +$error[$errmsgno];
-	sendMessages -typmsg "ERROR" -msg $msg;
+    return showError -code $ERRFUNC1 -fields $INPUT_FILE;
 	exit;
  }
  $pingnb=0;
@@ -1570,28 +2135,20 @@ function main() {
       $pingreturns = $ping.send(“$proteus");
       $status = $pingreturns.Status;
     } catch {
-      if ($debugging -eq 'YES') { $status = "Success"; }
-      else {
        $msg ="Error system: Check your IP ${proteus} ... ${status}";
-      }
     }
     $pingnb++;
  } until (($Status -eq 'Success') -or ($pingnb -ge 4));
  if ($pingreturns.Status -ne 'Success') {
-    if ($debugging -ne 'YES') {
        $msg ="Cannot ping ${proteus} ... ${status}";
        sendMessages -typmsg "DEBUG" -msg $msg;
        exit;
-     } else {
-       $msg ="Cannot ping ${proteus} ... Continuing for debugging mode ... ";
-       sendMessages -typmsg "DEBUGGING" -msg $msg
-    }
  } else {
    sendMessages -typmsg 'DEBUG' -msg 'Proteus reachable';
  }
  sendMessages -typmsg 'DEBUG' -msg "initialize .Net";
  $wsdl= initAPI -name $userAPI -pass $pwAPI;
- if (($debugging -eq 'YES') -or (($wsdl -ne $null) -and ($wsdl -ne 0)) ) {
+ if (($wsdl -ne $null) -and ($wsdl -ne 0)) {
   #begin of the treatment
   readInputs -varfile ([ref] $containerfile);
   foreach ($line in $containerfile) {
@@ -1606,137 +2163,114 @@ function main() {
 	    # later for more parameters
         $theTitles= fillTitleInfo -line $line;
         continue;
-      } elseif ($theAction.Contains("CONFIG-NAME")) {
-        $cfgid= initConfiguration -wsdl ([ref] $wsdl) -configname $thedata["name"];
-        if($wsdl["cfgid"] -ne 0) {
-           $step =1;
+      } else {
+        if ($theAction.Contains("CONFIG-NAME")) {
+          $cfgname = $thedata["name"];
+          $cfgid= initConfiguration -wsdl ([ref] $wsdl) -configname $cfgname;
         } else {
-           $step =2;
-        }
-        continue;
-      }
-      if (($listReadActions -contains $theAction)) {
-        switch ($theAction) {
-           "SEARCHSUBNET" {
-             searchSubnet -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -data $thedata
-             break;
-           }
-           default { break; }
-        } #end switch
-        $step =2;
-        continue;
-      }
-      if ($step -eq 1) {
-       if (($listActions -contains $theAction)) {
-        if ( ($theAction.Contains("_DEVICE")) -or ($theAction.Contains("_TAG")) ) {
-          switch ($theAction) {
-            "DEL_DEVICE" {
-              deleteDevice -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -data $thedata -fields $theFields
-              break;
-            }
-            "ADD_DEVICE" {
-              addDevice -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -data $thedata -fields $theFields
-              break;
-            }
-            "MODIFY_DEVICE" {
-              modifyDevice -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -data $thedata -fields $theFields
-              break;
-            }
-            "ADD_TAG" {
-              addTags -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -data $thedata -fields $theFields
-              break;
-            }
-            "MODIFY_TAG" {
-              modifyTags -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -data $thedata -fields $theFields
-              break;
-            }
-            default {
-              $errmsgno=$ERRFUNC2;
-              $msg= $error[$errmsgno]+" "+$thedata["action"];
-              sendMessages -typmsg "ERROR" -msg $msg;
-            }
-          } #end switch
-        } else {
-           if ($theAction.contains("_IP")) {
-             $tmp= $thedata["ip"];
-           } else {
-             $tmp= $thedata["CIDR"];
-           } 
-           $lg=$tmp.IndexOf("/");
-           if($lg -ge 0) {
-             $b=$tmp.Substring($deb,$lg);
-             $value= $tmp.Substring(0,$lg);
-           } else {
-            $value= $tmp;
-           }
-           try {
-             $rangeFound = $wsdl["proxy"].getIPRangedByIP($wsdl["cfgid"], "IP4Block",$value)
-             $msg= $tmp + " belongs to block name="+$rangeFound.name + "("+$rangeFound.id+") properties="+$rangeFound.properties;
-             sendMessages -typmsg "INFO" -msg $msg;
-           } catch {
-             $msg = 'Error by searching range '+$value+'. ' + $_.Exception.Message;
-             sendMessages -typmsg "ERROR" -msg $msg;
-             if ($debugging -eq 'YES') {
+          if (($listReadActions -contains $theAction)) {
+            switch ($theAction) {
+             "SEARCHSUBNET"   { $e=searchSubnet -wsdl $wsdl["proxy"] -data $thedata; break; }
+             "LISTIPS"        { $e=listIPs -wsdl $wsdl["proxy"] -cfgid $cfgid -data $thedata; break; }
+             "LISTDEVICES"    { $e=listDevices -wsdl $wsdl["proxy"] -cfgid $cfgid -data $thedata;  break; }
+             'COMMENT_OUTPUT' { $e=addCommentOutput -wsdl $wsdl["proxy"] -cfgid $cfgid -data $thedata ; break;}
+             default { break; }
+            } #end switch
+          } else {
+            if (($listActions -contains $theAction)) {
+              if ( ($theAction.Contains("_DEVICE")) -or ($theAction.Contains("_TAG")) ) {
+                switch ($theAction) {
+                 "DEL_DEVICE"    { $e=deleteDevice -wsdl $wsdl["proxy"] -cfgid $cfgid -data $thedata -fields $theFields; break; }
+                 "ADD_DEVICE"    { $e=addDevice -wsdl $wsdl["proxy"] -cfgid $cfgid -data $thedata; break; }
+                 "MODIFY_DEVICE" { $e=modifyDevice -wsdl $wsdl["proxy"] -cfgid $cfgid -data $thedata -fields $theFields; break; }
+                 "ADD_TAG"       { $e=addTags -wsdl $wsdl["proxy"] -cfgid $cfgid -data $thedata -fields $theFields; break; }
+                 "MODIFY_TAG"    { $e=modifyTags -wsdl $wsdl["proxy"] -cfgid $cfgid -data $thedata -fields $theFields; break; }
+                 default {
+                   $errmsgno=$ERRFUNC2;
+                   $msg2= getMessage -code $ERRFUNC2;
+                   $msg= $msg2+" "+$thedata["action"];
+                   sendMessages -typmsg "ERROR" -msg $msg;
+                 }
+               } #end switch
+             } else {
+               if($cfgid -ne 0) {
+                if ($theAction.contains("_IP")) {
+                  $tmp= $thedata["ip"];
+                } else {
+                  $tmp= $thedata["CIDR"];
+                } 
+                $lg=$tmp.IndexOf("/");
+                if($lg -ge 0) {
+                  $b=$tmp.Substring($deb,$lg);
+                  $value= $tmp.Substring(0,$lg);
+                } else {
+                 $value= $tmp;
+                }
+                try {
+                  $rangeFound = $wsdl["proxy"].getIPRangedByIP($cfgid, "IP4Block",$value)
+                  $msg= $tmp + " belongs to block name="+$rangeFound.name + "("+$rangeFound.id+") properties="+$rangeFound.properties;
+                  sendMessages -typmsg "INFO" -msg $msg;
+                } catch {
+                  $msg = 'Error by searching range '+$value+'. ' + $_.Exception.Message;
+                  sendMessages -typmsg "ERROR" -msg $msg;
+                }
+                if (($rangeFound.Type -ne $null) -and ($rangeFound.Id -ne 0) ) {
+                   switch ($theAction) {
+                    "MODIFY_IP"  { $e= modifyIP -wsdl $wsdl["proxy"] -cfgid $cfgid -range $rangeFound -data $thedata; break; }
+                    "ADD_IP"     { $e= addIP -wsdl $wsdl["proxy"] -cfgid $cfgid -range $rangeFound -data $thedata; break; }
+                    "DEL_IP"     { $e= deleteIP -wsdl $wsdl["proxy"] -cfgid $cfgid -data $thedata; break; }
+                    "ADD_SUBNET" { $e= addSubnet -wsdl $wsdl["proxy"] -cfgid $cfgid -range $rangeFound -data $thedata; break; }
+                    "MODIFY_SUBNET" { $e= modifySubnet -wsdl $wsdl["proxy"] -cfgid $cfgid -range $rangeFound -data $thedata; break; }
+                    default {
+                      $msg= getMessage -code $ERRFUNC3 -fields "${lista};${theAction}";
+                      sendMessages -typmsg 'ERROR' -msg $msg;
+                    }
+                   } #end switch
+                } else {
+                  return showError -code $ERRFUNC4 -fields " ${theAction}";
+                }
+               } else {
+                 return showError -code $ERRCFG1 -fields "${cfgname}";
+               }
              }
-           }
-           if (($rangeFound.Type -ne $null) -and ($rangeFound.Id -ne 0) ) {
-              switch ($theAction) {
-               "MODIFY_IP" {
-                 modifyIP -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -range $rangeFound -data $thedata
-                 break;
-               }
-               "ADD_IP" {
-                 addIP -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -range $rangeFound -data $thedata
-                 break;
-               }
-               "DEL_IP" {
-                 deleteIP -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -range $rangeFound -data $thedata
-                 break;
-               }
-               "ADD_SUBNET" {
-                 addSubnet -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -range $rangeFound -data $thedata
-                 break;
-               }
-               "MODIFY_SUBNET" {
-                 modifySubnet -wsdl $wsdl["proxy"] -cfgid $wsdl["cfgid"] -range $rangeFound -data $thedata
-                 break;
-               }
-               default {
-                 $errmsgno=$ERRFUNC3;
-                 $msg= $error[$errmsgno]+' '+$thedata['action'];
-                 sendMessages -typmsg 'ERROR' -msg $msg;
-               }
-              } #end switch
-           } else {
-             $errmsgno=$ERRFUNC4;
-             $msg= $error[$errmsgno]+' '+$theAction;
-             sendMessages -typmsg 'ERROR' -msg $msg;
+            } else {
+              $msg= getMessage -code $ERRFUNC3 -fields "${lista};${theAction}";
+              sendMessages -typmsg 'ERROR' -msg $msg;
+            }
           }
-        }
-       } else {
-         $errmsgno=$ERRFUNC3;
-         $msg= $error[$errmsgno]+' '+$theAction;
-         sendMessages -typmsg 'ERROR' -msg $msg;
        }
       }
     } 
-  }
-  if ( $step -eq 0 ) {
-     $errmsgno=$ERRFUNC2;
-     $msg= $error[$errmsgno];
-     sendMessages -typmsg 'ERROR' -msg $msg;
-  }
+   }
    try {
      $wsdl['proxy'].logout();
    } catch {
-     $msg ="Error on logout ${proteus}.";
+     $msg= getMessage -code $INIT2 -fields "Proteus ${proteus}";
      sendMessages -typmsg "ERROR" -msg $msg
    }
-
  }
  sendMessages -typmsg 'DEBUG' -msg '------------- END ------------';
 }
+if ($help) { showHelp -path $PSScriptRoot; }
+if ($commands) { $INPUT_FILE = $commands; }
+if ($output) { $OUTPUT_FILE = $output; $global:isoutput = 'YES'; $isout = 'YES'; } else { $isout = ''; }
+if ($ip) { $global:proteus = $ip;} else { $ip ='';}
+if (!$user) { $user ='';}
+if (!$password) { $password ='';}
+if ($level) {
+   $levels = getLevelParam;
+   $list='';
+   foreach ($ky in $levels.Keys) {
+      if ($list -eq '') { $list=$ky;} else { $list = $list + ',' + $ky;}
+   }
+   if ($list.Contains($level.ToUpper())) {
+      $global:ERROR_LEVEL = $level.ToUpper();
+   } else { 
+      $msg2 = $level+';'+$list;
+      $msg= getMessage -code $ERRINIT4 -fields $msg2;
+      sendMessages -typmsg 'INFO' -msg $msg;
+   }
+}
 
-
-main ;
+main -ip $ip -isout $isout -user $user -password $password;
 exit;
