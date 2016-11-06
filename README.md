@@ -41,24 +41,24 @@ create a bulk import export script for the Bluecat Network Proteus IPAM (IP addr
     DEL_SUBNET,LIST_DEVICE_WITHOUT_IP,LISTTAGS
 
 ## Examples
- I added for testing the examples some new fields and device'types like  
-   in IP4Network  : 'description,vlan'  
-   in IP4Address  : 'description,virtual'  
-   in Tags        : 'description,usedby,last-seen,alternative-name'  
-   in device'types: 'printer,PC'  
+I added for testing the examples some new fields and device'types like  
+* in IP4Network  : 'description,vlan'  
+* in IP4Address  : 'description,virtual'  
+* in Tags        : 'description,usedby,last-seen,alternative-name'  
+* in device'types: 'printer,PC'  
   
- #example global config  
- CONFIG-NAME,NetworkConfig1  
+   #example global config  
+   CONFIG-NAME,NetworkConfig1  
  
-##example SUBNETs + example own fields description & vlan
-# cidr (obligatory fields) for the search
-# Obligatory is the name's fields.
-# optional the other fields. Ask your Proteus's administrator for having the name of the fields
-#TITLE_SUBNET,cidr,name,description,vlan
-#ADD_SUBNET,10.1.0.0/24,network_10.1.0.0_24,add subnet if not exist,vlan50
-#MODIFY_SUBNET,10.1.0.0/24,network_10.1.0.0_24,modified subnet when field not empty,vlan51
-#ADD_SUBNET,10.2.0.0/24,net_10.2.0.0_24,add subnet if not exist,VLAN2
-#
+   ##example SUBNETs + example own fields description & vlan
+   # cidr (obligatory fields) for the search
+   # Obligatory is the name's fields.
+   # optional the other fields. Ask your Proteus's administrator for having the name of the fields
+   #TITLE_SUBNET,cidr,name,description,vlan
+   #ADD_SUBNET,10.1.0.0/24,network_10.1.0.0_24,add subnet if not exist,vlan50
+   #MODIFY_SUBNET,10.1.0.0/24,network_10.1.0.0_24,modified subnet when field not empty,vlan51
+   #ADD_SUBNET,10.2.0.0/24,net_10.2.0.0_24,add subnet if not exist,VLAN2
+  
 ##example IPs  + example own fields description & virtual
 TITLE_IP,name,ip,description,virtual
 ADD_IP_FORCE,TEST_1,10.1.0.5,rewritten 10.1.0.5,1
