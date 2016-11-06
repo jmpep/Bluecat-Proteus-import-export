@@ -37,14 +37,13 @@ The field 'action' (see Format) allows to do some different actions.
 ### action in developement
     DEL_SUBNET,LIST_DEVICE_WITHOUT_IP,LISTTAGS
 ## Examples
-> I added for testing the examples some new fields and device'types like
->   in IP4Network  : 'description,vlan'
->   in IP4Address  : 'description,virtual'
->   in Tags        : 'description,usedby,last-seen,alternative-name'
->   in device'types: 'printer,PC'
->
+ I added for testing the examples some new fields and device'types like
+   in IP4Network  : 'description,vlan'
+   in IP4Address  : 'description,virtual'
+   in Tags        : 'description,usedby,last-seen,alternative-name'
+   in device'types: 'printer,PC'
 
-`##example global config
+##example global config
 CONFIG-NAME,NetworkConfig1
 
 ##example SUBNETs + example own fields description & vlan
@@ -171,4 +170,4 @@ COMMENT_OUTPUT,#
 COMMENT_OUTPUT,LIST of devices with first 'te' then any char and 't'
 TITLE_LISTDEVICES,filter,configuration,name,IP4Addresses,type,deviceTypeId,deviceType,description
 LISTDEVICES,te.*t,all
-`
+
