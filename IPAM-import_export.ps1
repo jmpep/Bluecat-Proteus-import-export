@@ -32,7 +32,6 @@ $global:logoverwrite="YES";
 $global:outputoverwrite="YES";
 #$global:wsdlPath = "http://$proteus/Services/API?wsdl"
 $global:proteus = "127.0.0.1";
-$global:proteus = "192.168.79.10";
 $global:wsdlPath = "https://$proteus/Services/API?wsdl"
 $global:Configuration = "Network"
 $MAXBLOCKS=1000;
@@ -500,7 +499,7 @@ function deleteIP($wsdl, $cfgid, $data,$verbose=1) {
          if ($verbose -eq 1) {
            $errmsgno=$ERRIPDEL1;
            if ($msgerror -ne '') { $msg2= ' Error:'+$msgerror; } else { $msg2 ='' }
-           $msg = "Delete not needed. The IP "+$ip+" doesn`'t exist already in this configuration (" + $cfg.name + ')!'+$msg2;
+           $msg = "Delete not needed. The IP "+$ip+" doesn't exist already in this configuration (" + $cfg.name + ')!'+$msg2;
            sendMessages -typmsg "INFO" -msg $msg;
          }
        } else {
@@ -643,7 +642,7 @@ function modifyIP($wsdl, $cfgid, $range,$data) {
      $error=1;
    }
    if ( $tmpip -eq $null ) {
-          $msg = "The IP "+$ip+" doesn`'t exist! No changes are possible";
+          $msg = "The IP "+$ip+" doesn't exist! No changes are possible";
           sendMessages -typmsg "ERROR" -msg $msg;
    } else {
      $subnetFound = $wsdl.getIPRangedByIP($cfgid, "IP4Network",$ip)
@@ -1513,7 +1512,7 @@ function modifyTags($wsdl, $cfgid,$data,$fields) {
         try {
            $wsdl.update($TagFound);
            $TagFound2= $wsdl.getEntityById($TagFound.id);
-           $msg="Verifying tag`'s changes ID="+$TagFound2.id+" name="+$TagFound2.name+" properties="+$TagFound2.properties;
+           $msg="Verifying tag's changes ID="+$TagFound2.id+" name="+$TagFound2.name+" properties="+$TagFound2.properties;
            sendMessages -typmsg "DEBUG" -msg $msg;
          } catch {
            $ErrorMessage = $_.Exception.Message;
@@ -1584,7 +1583,7 @@ function modifyTags($wsdl, $cfgid,$data,$fields) {
       }
    } else {
       $errmsgno=$ERRTAG1;
-      $msg="Tag group "+$data["taggroup"]+" doesn`'t exist. Cannot add objet "+$data["name"]+". error="+$msgerror;
+      $msg="Tag group "+$data["taggroup"]+" doesn't exist. Cannot add objet "+$data["name"]+". error="+$msgerror;
       sendMessages -typmsg "ERROR" -msg $msg;
    }
 }
@@ -1690,7 +1689,6 @@ function searchSubnet($wsdl, $data) {
                 }
               }
        }
-       #$msg = $msgtitle + "`n" + $msgvalues; 
        $msg = $msgvalues; 
        sendMessages -typmsg "NORMAL" -msg $msg -out $global:isoutput;
      }
@@ -2132,7 +2130,7 @@ function main($ip,$isout,$user,$password) {
  do {
 	$ping = new-object system.net.networkinformation.ping;
     try {
-      $pingreturns = $ping.send(“$proteus");
+      $pingreturns = $ping.Send($proteus);
       $status = $pingreturns.Status;
     } catch {
        $msg ="Error system: Check your IP ${proteus} ... ${status}";
