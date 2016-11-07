@@ -59,7 +59,8 @@ ADD_DEVICE,test-device1,PC,,10.1.0.10;10.1.0.11,added test-device1,
 MODIFY_DEVICE,test-device1,printer,,+10.1.0.15;+10.2.0.6;-10.1.0.17;-10.1.0.11,modified test-device1,
 ADD_DEVICE,test-device2,PC,,10.1.0.11,added test-device2
 ADD_DEVICE_FORCE,test-device3,printer,,10.1.0.12,delete and replace test-device3
-
+
+
 ##example for Tags (example for VLANs or other tags'groups)
 #info:
 # Obligatory is the taggroup's and name's fields.
